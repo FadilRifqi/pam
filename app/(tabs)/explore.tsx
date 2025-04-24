@@ -1,25 +1,24 @@
-import { StyleSheet, Image, Platform } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Text } from 'react-native';
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
   return (
-    <>
-      <Image
-        source={require('https://example.com/image.png')} // Replace with your image URL
-        style={styles.headerImage}
-      />
-    </>
+    <View style={styles.container}>
+      <Text style={styles.title}>Welcome to the Explore Screen</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
   },
 });

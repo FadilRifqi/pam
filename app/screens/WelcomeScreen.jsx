@@ -1,15 +1,22 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Dimensions,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import ThemedButton from '../../components/ThemedButton';
 import ThemedContent from '../../components/ThemedContent';
 
 const WelcomeScreen = () => {
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
-  
+
   const handleStart = () => {
-    router.push('/screens/HomeScreen');
+    router.push('/screens/Start/GoalScreen');
   };
 
   const handleGoogleSignIn = () => {
@@ -29,13 +36,13 @@ const WelcomeScreen = () => {
       </View>
 
       <View style={styles.bottomContainer}>
-        <ThemedButton 
-          label="START" 
-          onPress={handleStart} 
+        <ThemedButton
+          label="START"
+          onPress={handleStart}
           style={styles.startButton}
           textStyle={styles.startButtonText}
         />
-        
+
         <View style={styles.signInContainer}>
           <Text style={styles.alreadyText}>Already have an account? </Text>
           <TouchableOpacity onPress={() => setModalVisible(true)}>
@@ -43,14 +50,14 @@ const WelcomeScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-      
+
       <Modal
         animationType="slide"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setModalVisible(false)}
@@ -58,19 +65,19 @@ const WelcomeScreen = () => {
           <View style={styles.modalContainer}>
             <TouchableOpacity
               activeOpacity={1}
-              onPress={e => e.stopPropagation()}
+              onPress={(e) => e.stopPropagation()}
             >
               <View style={styles.modalContent}>
                 <Text style={styles.modalTitle}>Sign In</Text>
-                
-                <ThemedButton 
+
+                <ThemedButton
                   label="Sign in with Google"
                   onPress={handleGoogleSignIn}
                   style={styles.googleButton}
                   textStyle={styles.googleButtonText}
                 />
-                
-                <ThemedButton 
+
+                <ThemedButton
                   label="Cancel"
                   onPress={() => setModalVisible(false)}
                   variant="link"

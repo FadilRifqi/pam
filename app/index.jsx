@@ -12,7 +12,7 @@ export default function Index() {
         if (userData) {
           // Jika userData ada, arahkan ke halaman Home
           setInitialRoute({
-            href: '/screens/HomeScreen',
+            href: '/screens/Splash/SplashScreen',
             data: JSON.parse(userData),
           });
         } else {

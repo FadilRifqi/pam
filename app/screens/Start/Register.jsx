@@ -87,7 +87,7 @@ const Register = () => {
       const userData = { name, email, profileImage };
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
 
-      router.push('/screens/LoginScreen');
+      router.replace('/screens/LoginScreen');
     } catch (error) {
       setToast({ visible: true, message: error.message, type: 'error' });
     }

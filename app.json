@@ -1,21 +1,24 @@
 {
   "expo": {
-    "name": "Tubes",
-    "slug": "Tubes",
+    "name": "test",
+    "slug": "test",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": {
-      "supportsTablet": true
-    },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.pam.android",
+      "googleServicesFile": "./app/google-services.json"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pam.ios"
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +39,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "14729ee1-d3e2-4392-9df1-c8055ff7ccff"
+      }
     }
   }
 }

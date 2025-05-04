@@ -5,27 +5,91 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StatusBar, // Import StatusBar
+  StatusBar,
   StyleSheet,
   Text,
+  Button,
   TouchableOpacity,
-  View
+  View,
+  Alert
 } from 'react-native';
+
+// Import Firebase JS SDK
+import { auth } from '../../firebaseConfig';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleAuthProvider, getAuth, signInWithCredential } from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
 
 import ThemedButton from '../../components/ThemedButton';
 import ThemedContent from '../../components/ThemedContent';
 import ThemedInput from '../../components/ThemedInput';
+
+GoogleSignin.configure({
+  webClientId: '',
+});
+
+function GoogleSignIn() {
+  return (
+    <Button
+      title="Google Sign-In"
+      onPress={() => onGoogleButtonPress().then(() => console.log('Signed in with Google!'))}
+    />
+  );
+}
+
+async function onGoogleButtonPress() {
+  // Check if your device supports Google Play
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  // Get the users ID token
+  const signInResult = await GoogleSignin.signIn();
+
+  // Try the new style of google-sign in result, from v13+ of that module
+  idToken = signInResult.data?.idToken;
+  if (!idToken) {
+    // if you are using older versions of google-signin, try old style result
+    idToken = signInResult.idToken;
+  }
+  if (!idToken) {
+    throw new Error('No ID token found');
+  }
+
+  // Create a Google credential with the token
+  const googleCredential = GoogleAuthProvider.credential(signInResult.data.idToken);
+
+  // Sign-in the user with the credential
+  return signInWithCredential(getAuth(), googleCredential);
+}
 
 const LoginScreen = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = () => {
-    console.log('Login with:', email, password);
-    router.replace('/screens/HomeScreen');
+  // Move signUpTest inside the component so it can access email and password
+  const signUpTest = () => {
+    createUserWithEmailAndPassword(auth, "testemail@gmail.com", "password")
+      .then(() => {
+        console.log('User account created & signed in!');
+        navigation.navigate('HomeScreen');
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   };
 
+  const handleLogin = () => {
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        Alert.alert('User ' + email + ' signed in!');
+        router.replace('/screens/HomeScreen');
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+  
   const handleForgotPassword = () => {
     router.push('/screens/ForgotPassword');
   };
@@ -36,7 +100,6 @@ const LoginScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Add StatusBar here */}
       <StatusBar
         barStyle="dark-content" 
         backgroundColor="#ffffff"
@@ -95,7 +158,7 @@ const LoginScreen = () => {
       <View style={styles.bottomContainer}>
         <ThemedButton 
           label="LOGIN"
-          onPress={handleLogin}
+          onPress={handleLogin} // Changed to handleLogin for correct functionality
           style={styles.loginButton}
           textStyle={styles.loginButtonText}
         />

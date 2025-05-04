@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,10 +7,12 @@ import {
   Image,
   TouchableOpacity,
 } from 'react-native';
-import React, { useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../config/firebaseConfig';
 import ThemedButton from '../../../components/ThemedButton';
+import Toast from '../../../components/Toast';
 import { useRouter } from 'expo-router';
 
 const Register = () => {
@@ -18,8 +21,18 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [activeInput, setActiveInput] = useState(null);
-  const [isRegistered, setIsRegistered] = useState(false);
+  const [toast, setToast] = useState({ visible: false, message: '', type: '' });
   const router = useRouter();
+
+  const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const isValidPassword = (password) => {
+    // Contoh aturan: minimal 6 karakter
+    return password.length >= 6;
+  };
 
   const handleImagePick = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -36,38 +49,49 @@ const Register = () => {
   };
 
   const handleRegister = async () => {
-    const userData = { name, email, password, profileImage };
-    await AsyncStorage.setItem('userData', JSON.stringify(userData));
-    setIsRegistered(true);
-  };
+    if (!name || !email || !password) {
+      setToast({
+        visible: true,
+        message: 'All fields are required.',
+        type: 'error',
+      });
+      return;
+    }
 
-  const handleGoToLogin = () => {
-    router.replace('/screens/Start/Login');
-  };
+    if (!isValidEmail(email)) {
+      setToast({
+        visible: true,
+        message: 'Invalid email format.',
+        type: 'error',
+      });
+      return;
+    }
 
-  const handleResend = () => {
-    alert('Activation link resent to your email!');
-  };
+    if (!isValidPassword(password)) {
+      setToast({
+        visible: true,
+        message: 'Password must be at least 6 characters.',
+        type: 'error',
+      });
+      return;
+    }
 
-  if (isRegistered) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.subtitle}>
-          We have sent an account activation link to your email,{'\u00A0'}
-          <Text style={{ color: '#35cc8c' }}>{email}</Text>. Please activate
-          your account before logging in.
-        </Text>
-        <ThemedButton
-          label="Go to Login"
-          onPress={handleGoToLogin}
-          style={styles.button}
-        />
-        <TouchableOpacity onPress={handleResend} style={styles.buttonResend}>
-          <Text style={styles.TextResend}>Resend Activation Link</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+    try {
+      const registeredUser = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = registeredUser.user;
+
+      const userData = { name, email, profileImage };
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+
+      router.push('/screens/LoginScreen');
+    } catch (error) {
+      setToast({ visible: true, message: error.message, type: 'error' });
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -109,6 +133,12 @@ const Register = () => {
         label="Register"
         onPress={handleRegister}
         style={styles.button}
+      />
+      <Toast
+        visible={toast.visible}
+        message={toast.message}
+        type={toast.type}
+        onHide={() => setToast({ ...toast, visible: false })}
       />
     </View>
   );
@@ -171,16 +201,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
     width: '100%',
     backgroundColor: '#35cc8c',
-  },
-  buttonResend: {
-    marginTop: 16,
-    width: '100%',
-    color: '#35cc8c',
-  },
-  TextResend: {
-    color: '#35cc8c',
-    textAlign: 'center',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
 });

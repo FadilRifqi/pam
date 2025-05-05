@@ -5,16 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "https",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
-      "package": "com.pam.app",
+      "package": "com.pam.test",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "googleServicesFile": "./app/google-services.json"
+      }
     },
     "ios": {
       "supportsTablet": true,
@@ -26,6 +25,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@react-native-google-signin/google-signin",
       "expo-router",
       [
         "expo-splash-screen",
@@ -41,59 +41,21 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {
-        "origin": false
-      },
-      "eas": {
-        "projectId": "14729ee1-d3e2-4392-9df1-c8055ff7ccff"
-      },
+      "googleAuthRedirectUri": "https://auth.expo.io/@fadilrifqi/test",
       "firebase": {
         "project_info": {
           "project_number": "184018390631",
           "project_id": "tubes-pam-d1bc2",
           "storage_bucket": "tubes-pam-d1bc2.firebasestorage.app"
-        },
-        "client": [
-          {
-            "client_info": {
-              "mobilesdk_app_id": "1:184018390631:android:940868ea1565e038c54ec2",
-              "android_client_info": {
-                "package_name": "com.pam.android"
-              }
-            },
-            "oauth_client": [
-              {
-                "client_id": "184018390631-4rb6d3ptvpkgpbaf1dmqap5b8orvoufn.apps.googleusercontent.com",
-                "client_type": 1,
-                "android_info": {
-                  "package_name": "com.pam.android",
-                  "certificate_hash": "f4ac00dfe849058c9c6d4cb5cb229be86c4727df"
-                }
-              },
-              {
-                "client_id": "184018390631-35mfn2akp5upjkm5ic99g37ljp4d28u1.apps.googleusercontent.com",
-                "client_type": 3
-              }
-            ],
-            "api_key": [
-              {
-                "current_key": "AIzaSyCEVGGJ58PSvP-9Td9ynN_nVLyIGzYLFpw"
-              }
-            ],
-            "services": {
-              "appinvite_service": {
-                "other_platform_oauth_client": [
-                  {
-                    "client_id": "184018390631-35mfn2akp5upjkm5ic99g37ljp4d28u1.apps.googleusercontent.com",
-                    "client_type": 3
-                  }
-                ]
-              }
-            }
-          }
-        ],
-        "configuration_version": "1"
+        }
+      },
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "37da2594-781a-4791-81de-4fac7a1f2346"
       }
-    }
+    },
+    "owner": "fadilrifqi"
   }
 }

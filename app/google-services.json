@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "184018390631",
+    "project_id": "tubes-pam-d1bc2",
+    "storage_bucket": "tubes-pam-d1bc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184018390631:android:940868ea1565e038c54ec2",
+        "android_client_info": {
+          "package_name": "com.pam.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "184018390631-4jh33e1ejlufo2s6o38e7ogbb20gv7cv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pam.android",
+            "certificate_hash": "fe97b24c79614d111b46300b4238bcfebcb53ebf"
+          }
+        },
+        {
+          "client_id": "184018390631-35mfn2akp5upjkm5ic99g37ljp4d28u1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEVGGJ58PSvP-9Td9ynN_nVLyIGzYLFpw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184018390631-35mfn2akp5upjkm5ic99g37ljp4d28u1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

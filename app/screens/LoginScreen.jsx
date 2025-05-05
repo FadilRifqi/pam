@@ -1,46 +1,75 @@
-import * as Google from 'expo-auth-session/providers/google';
-import { GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useEffect } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { auth } from '../../firebaseConfig';
+import {
+  GoogleSignin,
+  isSuccessResponse,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from 'react-native';
+
+WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId:
-      '184018390631-35mfn2akp5upjkm5ic99g37ljp4d28u1.apps.googleusercontent.com', // Replace with your Google Client ID
-  });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   useEffect(() => {
-    if (response?.type === 'success') {
-      const { id_token } = response.params;
+    GoogleSignin.configure({
+      webClientId:
+        '258181757491-7ie30d566fsk42qt10pi4pbca6hfofjb.apps.googleusercontent.com',
+      profileImageSize: 120,
+    });
+  }, []);
 
-      // Create a credential with the token
-      const credential = GoogleAuthProvider.credential(id_token);
-
-      // Sign in with Firebase using the credential
-      signInWithCredential(auth, credential)
-        .then(() => {
-          Alert.alert('Success', 'You are signed in with Google!');
-        })
-        .catch((error) => {
-          console.error(error);
-          Alert.alert('Error', error.message);
-        });
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsSubmitting(true);
+      const response = await GoogleSignin.signIn();
+      if (isSuccessResponse(response)) {
+        const { idToken, user } = response.data;
+        console.log(response);
+        const { name, email, photo } = user;
+        console.log('idToken:', idToken);
+        console.log('User:', user);
+      } else {
+        console.error('Cancelled by user');
+      }
+    } catch (error) {
+      if (isErrorWithCode(error)) {
+        switch (error.code) {
+          case statusCodes.IN_PROGRESS:
+            console.error('Sign-in in progress');
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            console.error('Play services not available');
+            break;
+          default:
+            console.error('Unknown error:', error);
+            break;
+        }
+      }
+      console.error('Google Sign-In Error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [response]);
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-      <TouchableOpacity
-        style={styles.button}
-        disabled={!request}
-        onPress={() => {
-          promptAsync();
-        }}
-      >
-        <Text style={styles.buttonText}>Sign in with Google</Text>
-      </TouchableOpacity>
+      {isSubmitting ? (
+        <ActivityIndicator size="large" color="#4285F4" />
+      ) : (
+        <TouchableOpacity style={styles.button} onPress={handleGoogleSignIn}>
+          <Text style={styles.buttonText}>Sign in with Google</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };

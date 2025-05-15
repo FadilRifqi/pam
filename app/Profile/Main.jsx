@@ -29,6 +29,10 @@ const ProfilSettings = () => {
     router.push('/Profile/Settings/Main');
   };
 
+  const handleAccountNext = () => {
+    router.push('/Profile/Settings/Account');
+  }
+  
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -40,14 +44,14 @@ const ProfilSettings = () => {
       </View>
 
       {/* Foto Profil */}
-      <View style={styles.profileContainer}>
+      <TouchableOpacity onPress={handleAccountNext}style={styles.profileContainer}>
         <Image
           source={{ uri: 'https://via.placeholder.com/150' }} // Ganti dengan URL foto profil
           style={styles.profileImage}
         />
         <Text style={styles.username}>Username</Text>
         <Text style={styles.email}>user@example.com</Text>
-      </View>
+      </TouchableOpacity>
 
     {/* Tombol Hijau */}
         <View style={styles.greenButtonsContainer}>

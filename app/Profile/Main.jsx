@@ -10,19 +10,23 @@ const ProfilSettings = () => {
   };
 
   const handleMeNext = () => {
-    router.push('/Settings/MeSettings');
+    router.push('/Profile/Me');
   };
 
   const handleCalorieIntakeNext = () => {
-    router.push('/Settings/CalorieIntakeSettings');
+    router.push('/Profile/CalorieIntake');
   };
 
   const handleAboutNext = () => {
-    router.push('/Settings/AboutSettings');
+    router.push('/Profile/About');
   };
 
   const handleContactUstNext = () => {
-    router.push('/Settings/ContactUsSettings');
+    router.push('/Profile/ContactUs');
+  };
+
+  const handleSettingstNext = () => {
+    router.push('/Profile/Settings/Main');
   };
 
   return (
@@ -95,7 +99,7 @@ const ProfilSettings = () => {
             source={require('../../assets/images/settings.png')} // Ganti dengan path ikon Anda
             style={styles.icon}
           />
-          <Text style={styles.otherButtonText}>Settings</Text>
+          <Text style={styles.otherButtonText} onPress={handleSettingstNext}>Settings</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.otherButton}>
           <Image

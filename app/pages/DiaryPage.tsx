@@ -17,6 +17,7 @@ import WaterIntake from '../Components/WaterIntake';
 import MealCard from '../Components/MealList';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
+import Footer from '../Components/Footer';
 
 interface PFCProps {
   protein: number;
@@ -29,6 +30,7 @@ interface PFCProps {
 interface Meal {
   type: string;
   time: string;
+  calories: number; // Optional property
 }
 
 function DiaryPage() {
@@ -49,11 +51,13 @@ function DiaryPage() {
     water: 0,
   });
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [meals, setMeals] = useState<Meal[]>([]); // State untuk daftar makanan
   const [modalVisible, setModalVisible] = useState(false); // State untuk modal
   const [mealInput, setMealInput] = useState<Meal>({
     type: '',
     time: '',
+    calories: 0,
   }); // State untuk input makanan
   const router = useRouter();
 
@@ -97,6 +101,7 @@ function DiaryPage() {
         if (userData) {
           const parsedData = JSON.parse(userData);
           setProfileImage(parsedData.photo); // Ambil URI gambar profil
+          setUserName(parsedData.name); // Ambil nama pengguna
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -122,7 +127,7 @@ function DiaryPage() {
         JSON.stringify(updatedMeals)
       ); // Simpan ke AsyncStorage
       setModalVisible(false); // Tutup modal
-      setMealInput({ type: '', time: '' }); // Reset input
+      setMealInput({ type: '', time: '', calories: 0 }); // Reset input
       Alert.alert('Success', 'Meal added successfully!');
     } catch (error) {
       console.error('Error adding meal:', error);
@@ -135,110 +140,139 @@ function DiaryPage() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleUserProfile}>
-          <Image
-            source={{
-              uri: profileImage || 'https://placekitten.com/100/100', // Default jika tidak ada gambar
-            }}
-            style={styles.avatar}
-          />
-        </Pressable>
-        <Text style={styles.today}>{selectedDate.toDateString()}</Text>
-        <Pressable onPress={() => setCalendarVisible(true)}>
-          <Text style={styles.calendar}>📅</Text>
-        </Pressable>
-      </View>
-
-      {/* Calendar Modal */}
-      {calendarVisible && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="calendar"
-          onChange={handleDateChange}
-        />
-      )}
-
-      {/* Nutrients */}
-      <View style={styles.section}>
-        <NutrientIndicator
-          protein={{ value: input.protein, goal: PFC.protein }}
-          fats={{ value: input.fats, goal: PFC.fats }}
-          carbs={{ value: input.carbs, goal: PFC.carbs }}
-          calories={{ value: input.calories, goal: PFC.calories }}
-        />
-      </View>
-
-      {/* Water Intake */}
-      <View style={styles.section}>
-        <WaterIntake
-          current={input.water}
-          goal={2.5}
-          lastTime="10:45 AM"
-          setInput={setInput}
-          input={input}
-          date={selectedDate}
-        />
-      </View>
-
-      {/* Meals */}
-      <View style={styles.mealHeader}>
-        <Text style={styles.mealTitle}>Meals</Text>
-        <Pressable onPress={() => setModalVisible(true)}>
-          <Text style={{ fontSize: 20 }}>＋</Text>
-        </Pressable>
-      </View>
-      {meals.map((meal, index) => (
-        <MealCard key={index} name={meal.type} calories={0} time={meal.time} />
-      ))}
-
-      {/* Modal untuk Menambahkan Makanan */}
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
+    <View style={styles.viewStyle}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 24 }}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Add Meal</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Meal Type (e.g., Breakfast, Lunch)"
-              value={mealInput.type}
-              onChangeText={(text) =>
-                setMealInput({ ...mealInput, type: text })
-              }
+        {/* Header */}
+        <View style={styles.header}>
+          <Pressable
+            onPress={handleUserProfile}
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+          >
+            <Image
+              source={{
+                uri: profileImage || 'https://placekitten.com/100/100', // Default jika tidak ada gambar
+              }}
+              style={styles.avatar}
             />
-            <TextInput
-              style={styles.input}
-              placeholder="Time (e.g., 10:45 AM)"
-              value={mealInput.time}
-              onChangeText={(text) =>
-                setMealInput({ ...mealInput, time: text })
-              }
-            />
-            <Button title="Add Meal" onPress={handleAddMeal} />
-            <Button title="Close" onPress={() => setModalVisible(false)} />
-          </View>
+            <Text
+              style={{
+                fontSize: 16,
+                fontWeight: '600',
+                maxWidth: 80,
+                marginLeft: 6,
+              }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {userName || 'User Name'}
+            </Text>
+          </Pressable>
+          <Text style={styles.today}>{selectedDate.toDateString()}</Text>
+          <Pressable onPress={() => setCalendarVisible(true)}>
+            <Text style={styles.calendar}>📅</Text>
+          </Pressable>
         </View>
-      </Modal>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text>📖 Recipes</Text>
-        <Text style={styles.active}>📝 Diary</Text>
-        <Text>📊 Reports</Text>
-      </View>
-    </ScrollView>
+        {/* Calendar Modal */}
+        {calendarVisible && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="calendar"
+            onChange={handleDateChange}
+          />
+        )}
+
+        {/* Nutrients */}
+        <View style={styles.section}>
+          <NutrientIndicator
+            protein={{ value: input.protein, goal: PFC.protein }}
+            fats={{ value: input.fats, goal: PFC.fats }}
+            carbs={{ value: input.carbs, goal: PFC.carbs }}
+            calories={{ value: input.calories, goal: PFC.calories }}
+          />
+        </View>
+
+        {/* Water Intake */}
+        <View style={styles.section}>
+          <WaterIntake
+            current={input.water}
+            goal={2.5}
+            lastTime="10:45 AM"
+            setInput={setInput}
+            input={input}
+            date={selectedDate}
+          />
+        </View>
+
+        {/* Meals */}
+        <View style={styles.mealHeader}>
+          <Text style={styles.mealTitle}>Meals</Text>
+          <Pressable onPress={() => setModalVisible(true)}>
+            <Text style={{ fontSize: 20 }}>＋</Text>
+          </Pressable>
+        </View>
+        {meals.map((meal, index) => (
+          <MealCard
+            key={index}
+            name={meal.type}
+            calories={meal.calories}
+            time={meal.time}
+            date={selectedDate}
+          />
+        ))}
+
+        {/* Footer */}
+
+        {/* Modal untuk Menambahkan Makanan */}
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Add Meal</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Meal Type (e.g., Breakfast, Lunch)"
+                value={mealInput.type}
+                onChangeText={(text) =>
+                  setMealInput({ ...mealInput, type: text })
+                }
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Time (e.g., 10:45 AM)"
+                value={mealInput.time}
+                onChangeText={(text) =>
+                  setMealInput({ ...mealInput, time: text })
+                }
+              />
+              <Button title="Add Meal" onPress={handleAddMeal} />
+              <Button title="Close" onPress={() => setModalVisible(false)} />
+            </View>
+          </View>
+        </Modal>
+      </ScrollView>
+      <Footer />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
+  viewStyle: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 20,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -276,12 +310,6 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-  footer: {
-    marginTop: 30,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  active: { fontWeight: 'bold', color: 'green' },
 });
 
 export default DiaryPage;

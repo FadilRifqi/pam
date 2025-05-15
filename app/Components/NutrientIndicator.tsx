@@ -1,17 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function NutrientIndicator({ protein, fats, carbs, calories }: any) {
+export default function NutrientIndicator({
+  protein,
+  fats,
+  carbs,
+  calories,
+}: any) {
   const renderBar = (val: number, goal: number, color: string) => (
     <View style={styles.bar}>
-      <View style={[styles.fill, { width: `${(val / goal) * 100}%`, backgroundColor: color }]} />
+      <View
+        style={[
+          styles.fill,
+          {
+            width: `${(val / goal) * 100 > 100 ? 100 : (val / goal) * 100}%`,
+            backgroundColor: color,
+          },
+        ]}
+      />
     </View>
   );
 
   return (
     <View style={styles.container}>
       {[
-        { label: 'Proteins', val: protein.value, goal: protein.goal, color: 'red' },
+        {
+          label: 'Proteins',
+          val: protein.value,
+          goal: protein.goal,
+          color: 'red',
+        },
         { label: 'Fats', val: fats.value, goal: fats.goal, color: 'orange' },
         { label: 'Carbs', val: carbs.value, goal: carbs.goal, color: 'green' },
       ].map(({ label, val, goal, color }) => (
@@ -21,7 +39,9 @@ export default function NutrientIndicator({ protein, fats, carbs, calories }: an
           {renderBar(val, goal, color)}
         </View>
       ))}
-      <Text style={{ marginTop: 10, fontWeight: 'bold' }}>{`${calories.value} / ${calories.goal} Calories`}</Text>
+      <Text
+        style={{ marginTop: 10, fontWeight: 'bold' }}
+      >{`${calories.value} / ${calories.goal} Calories`}</Text>
       {renderBar(calories.value, calories.goal, '#00c853')}
     </View>
   );

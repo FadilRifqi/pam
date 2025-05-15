@@ -1,63 +1,169 @@
-import { View, Text, TextInput, FlatList, Image, StyleSheet, Pressable } from 'react-native';
-import { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  FlatList,
+  Image,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+} from 'react-native';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-
-const recipes = [
-  {
-    id: 'sushi',
-    title: 'Sushi',
-    calories: 244,
-    time: '60 min',
-    image: 'https://www.themealdb.com/images/media/meals/g046bb1663960946.jpg',
-  },
-  {
-    id: 'pancakes',
-    title: 'Pancakes',
-    calories: 300,
-    time: '60 min',
-    image: 'https://www.themealdb.com/images/media/meals/rwuyqx1511383174.jpg',
-  },
-];
+import Footer from '../Components/Footer';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createSignedUrl } from '../config/oAuthHelper';
 
 export default function Recipes() {
   const [search, setSearch] = useState('');
+  const [recipes, setRecipes] = useState<any[]>([]); // State untuk hasil resep
+  const [loading, setLoading] = useState(false); // State untuk loading
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null); // Resep yang dipilih
+  const [ingredients, setIngredients] = useState<any[]>([]); // Bahan-bahan
+  const [directions, setDirections] = useState<any[]>([]); // Langkah-langkah
+  const [modalVisible, setModalVisible] = useState(false); // State untuk modal
   const router = useRouter();
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
-  const filtered = recipes.filter((r) =>
-    r.title.toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+
+        if (userData) {
+          const parsedData = JSON.parse(userData);
+          setProfileImage(parsedData.photo); // Ambil URI gambar profil
+          setUserName(parsedData.name); // Ambil nama pengguna
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  const handleSearch = async () => {
+    if (!search.trim()) {
+      Alert.alert('Error', 'Please enter a search term.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const url = createSignedUrl(
+        'https://platform.fatsecret.com/rest/server.api',
+        'GET',
+        {
+          method: 'recipes.search',
+          format: 'json',
+          search_expression: search,
+          max_results: 10,
+        }
+      );
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.recipes && data.recipes.recipe) {
+        const recipesArray = Array.isArray(data.recipes.recipe)
+          ? data.recipes.recipe
+          : [data.recipes.recipe];
+        setRecipes(recipesArray);
+      } else {
+        setRecipes([]);
+      }
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+      Alert.alert('Error', 'Failed to fetch recipes.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecipeSelect = (recipe: any) => {
+    router.push({
+      pathname: '/pages/RecipeDetail',
+      params: { recipeId: recipe.recipe_id }, // Kirim recipe_id sebagai parameter
+    });
+  };
+
+  const handleUserProfile = () => {
+    router.push('/screens/User/Settings');
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Itami</Text>
-      <TextInput
-        placeholder="Search for recipes"
-        style={styles.search}
-        value={search}
-        onChangeText={setSearch}
-      />
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() =>
-              router.push({
-                pathname: '/Recipes/[RecipesId]',
-                params: { RecipesId: item.id }, // Passing the dynamic parameter
-              })
-            }
+    <View style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <Pressable
+          onPress={handleUserProfile}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 20,
+          }}
+        >
+          <Image
+            source={{
+              uri: profileImage || 'https://placekitten.com/100/100', // Default jika tidak ada gambar
+            }}
+            style={styles.avatar}
+          />
+          <Text
+            style={{
+              fontSize: 16,
+              fontWeight: '600',
+              marginLeft: 6,
+            }}
+            numberOfLines={1}
+            ellipsizeMode="tail"
           >
-            <Image source={{ uri: item.image }} style={styles.image} />
-            <View style={styles.cardInfo}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.sub}>{item.calories} Cal</Text>
-              <Text style={styles.time}>{item.time}</Text>
-            </View>
-          </Pressable>
+            {userName || 'User Name'}
+          </Text>
+        </Pressable>
+        <TextInput
+          placeholder="Search for recipes"
+          style={styles.search}
+          value={search}
+          onChangeText={setSearch}
+          onSubmitEditing={handleSearch} // Panggil pencarian saat tekan enter
+        />
+        {loading ? (
+          <ActivityIndicator size="large" color="#007BFF" />
+        ) : (
+          <FlatList
+            data={recipes}
+            keyExtractor={(item) => item.recipe_id}
+            renderItem={({ item }) => (
+              <Pressable
+                style={styles.card}
+                onPress={() => handleRecipeSelect(item)} // Buka modal dengan detail resep
+              >
+                <Image
+                  source={{
+                    uri: item.recipe_image || 'https://via.placeholder.com/100',
+                  }}
+                  style={styles.image}
+                />
+                <View style={styles.cardInfo}>
+                  <Text style={styles.title}>{item.recipe_name}</Text>
+                  <Text style={styles.sub}>
+                    {item.recipe_description || 'No description available'}
+                  </Text>
+                </View>
+              </Pressable>
+            )}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>No recipes found</Text>
+            }
+          />
         )}
-      />
+      </View>
+      <Footer />
     </View>
   );
 }
@@ -83,5 +189,62 @@ const styles = StyleSheet.create({
   cardInfo: { padding: 10, flex: 1 },
   title: { fontSize: 18, fontWeight: 'bold' },
   sub: { fontSize: 14, color: 'gray' },
-  time: { marginTop: 5, fontSize: 12, color: '#666' },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+    color: 'gray',
+  },
+  avatar: { width: 40, height: 40, borderRadius: 20 },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 16,
+    elevation: 5,
+  },
+
+  carouselContainer: {
+    marginBottom: 10,
+  },
+
+  carouselImage: {
+    width: 400,
+    height: 300,
+    borderRadius: 12,
+    marginRight: 10,
+  },
+
+  closeButton: {
+    position: 'absolute',
+    backgroundColor: '#FF3B30',
+    padding: 10,
+    borderRadius: 20,
+    height: 40,
+    width: 40,
+    top: 0,
+  },
+
+  closeButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+
+  modalImage: { width: '100%', height: 200, borderRadius: 10 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginVertical: 10 },
+  modalDescription: { fontSize: 14, color: 'gray', textAlign: 'center' },
+  nutritionContainer: { marginVertical: 10 },
+  nutritionText: { fontSize: 14, color: 'black' },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginTop: 20 },
+  ingredientText: { fontSize: 14, color: 'black', marginBottom: 5 },
+  stepText: { fontSize: 14, color: 'black', marginBottom: 5 },
 });

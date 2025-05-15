@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { createSignedUrl } from '../config/oAuthHelper';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type FoodItem = {
   name: string;
@@ -32,15 +33,38 @@ type Nutrients = {
 };
 
 export default function MealDetail() {
-  const { mealType } = useLocalSearchParams();
+  const { mealType, dateKey } = useLocalSearchParams();
   const router = useRouter();
   const mealKey = (mealType as string)?.toLowerCase();
-
+  const [currentMeal, setCurrentMeal] = useState(); // State untuk menyimpan jenis makanan
   const [items, setItems] = useState<FoodItem[]>([]);
-  const [modalVisible, setModalVisible] = useState(false); // State untuk modal
+  const [modalVisible, setModalVisible] = useState(false); // Modal pencarian
+  const [servingModalVisible, setServingModalVisible] = useState(false); // Modal untuk serving
+  const [selectedFood, setSelectedFood] = useState<any>(null); // Makanan yang dipilih
+  const [selectedServing, setSelectedServing] = useState<any>(null); // Serving yang dipilih
+  const [servingOptions, setServingOptions] = useState<any[]>([]); // Daftar serving
+  const [servingMultiplier, setServingMultiplier] = useState(1); // Jumlah serving
   const [searchQuery, setSearchQuery] = useState(''); // Input pencarian
   const [searchResults, setSearchResults] = useState<any[]>([]); // Hasil pencarian
   const [loading, setLoading] = useState(false); // Loading state
+
+  useEffect(() => {
+    const fetchExistingItems = async () => {
+      try {
+        const existing = await AsyncStorage.getItem(
+          `input-meals${dateKey}-${mealKey}`
+        );
+
+        if (existing) {
+          const parsed = JSON.parse(existing);
+          setItems(parsed.items || []); // Ambil items dari data yang ada
+        }
+      } catch (error) {
+        console.error('Error fetching existing items:', error);
+      }
+    };
+    fetchExistingItems();
+  }, []);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -52,8 +76,11 @@ export default function MealDetail() {
           method: 'foods.search',
           format: 'json',
           search_expression: searchQuery,
+          max_results: 50,
         }
       );
+
+      console.log();
 
       const response = await axios.get(url);
       const foods = response.data.foods.food; // Ambil data makanan
@@ -66,17 +93,100 @@ export default function MealDetail() {
     }
   };
 
-  const handleAddFood = (food: any) => {
+  const handleSelectFood = async (food: any) => {
+    try {
+      const foodId = food.food_id;
+      const url = createSignedUrl(
+        'https://platform.fatsecret.com/rest/server.api',
+        'GET',
+        {
+          method: 'food.get',
+          format: 'json',
+          food_id: foodId,
+        }
+      );
+
+      const response = await axios.get(url);
+      const foodDetails = response.data.food; // Detail makanan
+
+      const servings = Array.isArray(foodDetails.servings.serving)
+        ? foodDetails.servings.serving
+        : [foodDetails.servings.serving]; // Pastikan serving berupa array
+
+      setSelectedFood(foodDetails);
+      setServingOptions(servings); // Simpan daftar serving
+      setServingModalVisible(true); // Tampilkan modal untuk memilih serving
+    } catch (error) {
+      console.error('Error fetching food details:', error);
+      Alert.alert('Error', 'Failed to fetch food details.');
+    }
+  };
+
+  const handleAddFood = () => {
+    if (!selectedServing) return;
+
+    const multiplier = servingMultiplier;
     const newItem: FoodItem = {
-      name: food.food_name,
-      grams: 100, // Default 100g, bisa diubah sesuai kebutuhan
-      calories: food.food_description.match(/(\d+) calories/)?.[1] || 0,
-      protein: 10, // Dummy value, bisa diubah sesuai kebutuhan
-      fats: 5, // Dummy value, bisa diubah sesuai kebutuhan
-      carbs: 20, // Dummy value, bisa diubah sesuai kebutuhan
+      name: selectedFood.food_name,
+      grams: parseFloat(selectedServing.metric_serving_amount) * multiplier,
+      calories: parseFloat(selectedServing.calories) * multiplier,
+      protein: parseFloat(selectedServing.protein) * multiplier,
+      fats: parseFloat(selectedServing.fat) * multiplier,
+      carbs: parseFloat(selectedServing.carbohydrate) * multiplier,
     };
+
     setItems((prev) => [...prev, newItem]);
-    setModalVisible(false); // Tutup modal
+    setServingModalVisible(false); // Tutup modal serving
+    setModalVisible(false); // Tutup modal pencarian
+  };
+
+  const handleSave = async () => {
+    try {
+      const existing = await AsyncStorage.getItem(`input${dateKey}`);
+      const parsed = existing ? JSON.parse(existing) : { water: 0 };
+
+      // Gabungkan data lama (hanya water) dengan data baru (totals)
+      const newData = {
+        ...parsed,
+        ...totals, // calories, protein, fats, carbs dari hasil reduce
+      };
+
+      await AsyncStorage.setItem(`input${dateKey}`, JSON.stringify(newData));
+      await AsyncStorage.setItem(
+        `input-meals${dateKey}-${mealKey}`,
+        JSON.stringify({ items })
+      ); // Simpan items ke AsyncStorage
+
+      // Ambil data meal sebelumnya
+      const storedMeals = await AsyncStorage.getItem(`meals_${dateKey}`);
+      let meals = storedMeals ? JSON.parse(storedMeals) : [];
+
+      // Ubah atau tambahkan meal yang sesuai dengan mealType
+      const updatedMeals = [...meals];
+      const index = updatedMeals.findIndex(
+        (m: any) => m.type === mealType?.toString()
+      );
+
+      if (index !== -1) {
+        updatedMeals[index].calories = totals.calories;
+      } else {
+        updatedMeals.push({
+          type: mealType?.toString(),
+          calories: totals.calories,
+        });
+      }
+
+      // Simpan kembali
+      await AsyncStorage.setItem(
+        `meals_${dateKey}`,
+        JSON.stringify(updatedMeals)
+      );
+
+      router.back(); // Kembali ke halaman sebelumnya
+    } catch (error) {
+      console.error('Error saving meal:', error);
+      Alert.alert('Error', 'Failed to save meal.');
+    }
   };
 
   const totals = items.reduce<Nutrients>(
@@ -108,8 +218,8 @@ export default function MealDetail() {
             {item.name} - {item.grams}g
           </Text>
           <Text style={styles.itemDetail}>
-            Cal: {item.calories} | P: {item.protein}g | F: {item.fats}g | C:{' '}
-            {item.carbs}g
+            Cal: {item.calories.toFixed(1)} | P: {item.protein.toFixed(1)}g | F:{' '}
+            {item.fats.toFixed(1)}g | C: {item.carbs.toFixed(1)}g
           </Text>
         </View>
       ))}
@@ -117,11 +227,7 @@ export default function MealDetail() {
       <Pressable onPress={() => setModalVisible(true)} style={styles.addBtn}>
         <Text style={styles.addText}>+ Add Food</Text>
       </Pressable>
-
-      <Pressable
-        style={styles.saveBtn}
-        onPress={() => Alert.alert('Saved!', 'Meal has been saved.')}
-      >
+      <Pressable onPress={handleSave} style={styles.saveBtn}>
         <Text style={styles.saveText}>Save</Text>
       </Pressable>
 
@@ -150,7 +256,7 @@ export default function MealDetail() {
                 keyExtractor={(item, index) => index.toString()}
                 renderItem={({ item }) => (
                   <Pressable
-                    onPress={() => handleAddFood(item)}
+                    onPress={() => handleSelectFood(item)}
                     style={styles.resultItem}
                   >
                     <Text>{item.food_name}</Text>
@@ -169,6 +275,51 @@ export default function MealDetail() {
               onPress={() => setModalVisible(false)}
             >
               <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal untuk memilih serving */}
+      <Modal
+        visible={servingModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setServingModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Serving</Text>
+            <FlatList
+              data={servingOptions}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({ item }) => (
+                <Pressable
+                  onPress={() => setSelectedServing(item)}
+                  style={[
+                    styles.resultItem,
+                    selectedServing === item && { backgroundColor: '#ddd' },
+                  ]}
+                >
+                  <Text>{item.serving_description}</Text>
+                </Pressable>
+              )}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Enter multiplier (e.g., 1, 2)"
+              keyboardType="numeric"
+              value={servingMultiplier.toString()}
+              onChangeText={(text) => setServingMultiplier(Number(text))}
+            />
+            <Pressable style={styles.addBtn} onPress={handleAddFood}>
+              <Text style={styles.addText}>Add Food</Text>
+            </Pressable>
+            <Pressable
+              style={styles.closeButton}
+              onPress={() => setServingModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Cancel</Text>
             </Pressable>
           </View>
         </View>
@@ -213,7 +364,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: '80%',
+    width: '90%',
+    height: '70%', // Fixed height untuk modal
     backgroundColor: '#fff',
     padding: 20,
     borderRadius: 10,
@@ -228,6 +380,10 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
+  scrollableContent: {
+    flex: 1, // Agar konten dapat di-scroll
+    width: '100%',
+  },
   resultItem: {
     padding: 10,
     borderBottomWidth: 1,
@@ -237,7 +393,7 @@ const styles = StyleSheet.create({
   resultDetail: { fontSize: 12, color: 'gray' },
   emptyText: { marginTop: 10, fontSize: 14, color: 'gray' },
   closeButton: {
-    marginTop: 20,
+    marginTop: 10,
     backgroundColor: '#007BFF',
     padding: 10,
     borderRadius: 5,

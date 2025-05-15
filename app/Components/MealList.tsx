@@ -4,12 +4,19 @@ import { useRouter } from 'expo-router';
 
 type MealListProps = {
   name: string; // e.g., 'Breakfast'
-  calories: number;
+  calories: number | undefined;
   time: string; // e.g., '10:45 AM'
+  date: Date; // e.g., '2023-09-21'
 };
 
-export default function MealList({ name, calories, time }: MealListProps) {
+export default function MealList({
+  name,
+  calories,
+  time,
+  date,
+}: MealListProps) {
   const router = useRouter();
+  const dateKey = date.toISOString().split('T')[0]; // Format date to YYYY-MM-DD
 
   /*************  ✨ Windsurf Command ⭐  *************/
   /**
@@ -17,8 +24,11 @@ export default function MealList({ name, calories, time }: MealListProps) {
 
 /*******  a94b5df6-6615-4b70-a6fa-5db3af263881  *******/
   const handlePress = () => {
-    const mealType = name.toLowerCase(); // convert 'Breakfast' => 'breakfast'
-    router.push({ pathname: '/meal/[mealType]', params: { mealType } });
+    const mealType = name; // convert 'Breakfast' => 'breakfast'
+    router.push({
+      pathname: '/meal/[mealType]',
+      params: { mealType, dateKey },
+    });
   };
 
   return (
@@ -27,7 +37,7 @@ export default function MealList({ name, calories, time }: MealListProps) {
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.time}>{time}</Text>
       </View>
-      <Text style={styles.calories}>{calories} Cal</Text>
+      <Text style={styles.calories}>{calories || 0} Cal</Text>
     </Pressable>
   );
 }

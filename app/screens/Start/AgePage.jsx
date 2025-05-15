@@ -2,21 +2,23 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AgePage = () => {
-  const [weight, setWeight] = useState(0);
+  const [weight, setAge] = useState(0);
   const router = useRouter();
 
-  const handleNext = () => {
-    router.replace('/screens/Start/AgePage');
+  const handleNext = async () => {
+    await AsyncStorage.setItem('age', weight);
+    router.push('/screens/Start/RecommendedPFC');
   };
 
   return (
     <View style={styles.container1}>
-      <Text style={styles.title}>What’s your weight?</Text>
+      <Text style={styles.title}>What’s your age?</Text>
       <View style={{ width: '60%', alignSelf: 'center' }}>
         <Text style={styles.subtitle}>
-          Please enter your weight in kilograms
+          Required number of calories varies with age
         </Text>
       </View>
       <View style={styles.inputContainer}>
@@ -25,7 +27,7 @@ const AgePage = () => {
           placeholder="Enter Age (years)"
           keyboardType="numeric"
           value={weight}
-          onChangeText={(text) => setWeight(text)}
+          onChangeText={(text) => setAge(text)}
         />
       </View>
       <View style={styles.container}>

@@ -2,18 +2,21 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GenderPage = () => {
-  const [selectedGoal, setSelectedGoal] = useState('Male');
+  const [selectedGender, setSelectedGender] = useState('Male');
   const router = useRouter();
 
-  const handleGoalSelection = (goal) => {
-    setSelectedGoal(goal);
+  const handleGoalSelection = (gender) => {
+    setSelectedGender(gender);
   };
 
-  const handleNext = () => {
-    router.replace('/screens/Start/ActivePage');
+  const handleNext = async () => {
+    await AsyncStorage.setItem('gender', selectedGender);
+    router.push('/screens/Start/ActivePage');
   };
+
   return (
     <View style={styles.container1}>
       <Text style={styles.title}>What’s your gender?</Text>
@@ -23,7 +26,7 @@ const GenderPage = () => {
       <View style={styles.container2}>
         <TouchableOpacity
           style={
-            selectedGoal === 'Male' ? styles.buttonSelected : styles.button
+            selectedGender === 'Male' ? styles.buttonSelected : styles.button
           }
           onPress={() => handleGoalSelection('Male')}
         >
@@ -31,7 +34,7 @@ const GenderPage = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={
-            selectedGoal === 'Female' ? styles.buttonSelected : styles.button
+            selectedGender === 'Female' ? styles.buttonSelected : styles.button
           }
           onPress={() => handleGoalSelection('Female')}
         >

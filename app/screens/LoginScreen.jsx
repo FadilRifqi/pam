@@ -13,11 +13,14 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const LoginScreen = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     GoogleSignin.configure({
@@ -33,10 +36,21 @@ const LoginScreen = () => {
       const response = await GoogleSignin.signIn();
       if (isSuccessResponse(response)) {
         const { idToken, user } = response.data;
-        console.log(response);
-        const { name, email, photo } = user;
-        console.log('idToken:', idToken);
-        console.log('User:', user);
+
+        await AsyncStorage.setItem('userData', JSON.stringify(user));
+
+        // Cek apakah data penting sudah ada
+        const [recommendedPFC, goal, gender] = await Promise.all([
+          AsyncStorage.getItem('recommendedPFC'),
+          AsyncStorage.getItem('goal'),
+          AsyncStorage.getItem('gender'),
+        ]);
+
+        if (!recommendedPFC || !goal || !gender) {
+          router.push('/screens/Start/GoalScreen');
+        } else {
+          router.push('/pages/DiaryPage');
+        }
       } else {
         console.error('Cancelled by user');
       }

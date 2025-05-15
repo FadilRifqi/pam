@@ -16,7 +16,7 @@ const WelcomeScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleStart = () => {
-    router.push('/screens/Start/GoalScreen');
+    router.push('/screens/Start/Register');
   };
 
   const handleGoogleSignIn = () => {

@@ -2,13 +2,15 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const WeightPage = () => {
   const [weight, setWeight] = useState('');
   const router = useRouter();
 
-  const handleNext = () => {
-    router.replace('/screens/Start/RecommendedPFC');
+  const handleNext = async () => {
+    await AsyncStorage.setItem('weight', weight);
+    router.push('/screens/Start/AgePage');
   };
 
   return (

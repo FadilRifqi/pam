@@ -1,7 +1,8 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const RecommendedPFCPage = () => {
   const [recommendedPFC, setRecommendedPFC] = useState({
@@ -12,8 +13,95 @@ const RecommendedPFCPage = () => {
   });
   const router = useRouter();
 
+  useEffect(() => {
+    calculatePFC();
+  }, []);
+
+  const calculatePFC = async () => {
+    try {
+      // Ambil data dari AsyncStorage
+      const goal = await AsyncStorage.getItem('goal'); // Lose Weight, Keep Weight, Gain Weight
+      const gender = await AsyncStorage.getItem('gender'); // Male, Female
+      const active = await AsyncStorage.getItem('active'); // Sedentary, Low Active, Active, Very Active
+      const height = parseFloat(await AsyncStorage.getItem('height')); // meter
+      const weight = parseFloat(await AsyncStorage.getItem('weight')); // kg
+      const age = parseInt(await AsyncStorage.getItem('age')); // tahun
+
+      if (!goal || !gender || !active || !height || !weight || !age) {
+        console.error('Data tidak lengkap untuk menghitung PFC');
+        return;
+      }
+
+      // Hitung BMR menggunakan rumus Mifflin-St Jeor
+      let BMR;
+      if (gender === 'Male') {
+        BMR = 10 * weight + 6.25 * (height * 100) - 5 * age + 5; // Tinggi dikalikan 100 untuk cm
+      } else if (gender === 'Female') {
+        BMR = 10 * weight + 6.25 * (height * 100) - 5 * age - 161; // Tinggi dikalikan 100 untuk cm
+      } else {
+        console.error('Gender tidak valid');
+        return;
+      }
+
+      // Hitung TDEE berdasarkan faktor aktivitas
+      let TDEE;
+      switch (active) {
+        case 'Sedentary':
+          TDEE = BMR * 1.2;
+          break;
+        case 'Low Active':
+          TDEE = BMR * 1.375;
+          break;
+        case 'Active':
+          TDEE = BMR * 1.55;
+          break;
+        case 'Very Active':
+          TDEE = BMR * 1.725;
+          break;
+        default:
+          console.error('Level aktivitas tidak valid');
+          return;
+      }
+
+      // Sesuaikan TDEE berdasarkan tujuan
+      if (goal === 'Lose Weight') {
+        TDEE *= 0.75; // Kurangi 25%
+      } else if (goal === 'Gain Weight') {
+        TDEE *= 1.2; // Tambah 20%
+      }
+
+      // Distribusi makronutrien (PFC)
+      const proteinCalories = TDEE * 0.25; // 25% dari kalori total
+      const fatsCalories = TDEE * 0.25; // 25% dari kalori total
+      const carbsCalories = TDEE - (proteinCalories + fatsCalories); // Sisa kalori untuk karbohidrat
+
+      const protein = Math.round(proteinCalories / 4); // 1 gram protein = 4 kalori
+      const fats = Math.round(fatsCalories / 9); // 1 gram lemak = 9 kalori
+      const carbs = Math.round(carbsCalories / 4); // 1 gram karbohidrat = 4 kalori
+      const calories = Math.round(TDEE);
+
+      // Simpan hasil ke state
+      setRecommendedPFC({ protein, fats, carbs, calories });
+
+      // Simpan ke AsyncStorage (opsional)
+      await AsyncStorage.setItem(
+        'recommendedPFC',
+        JSON.stringify({ protein, fats, carbs, calories })
+      );
+
+      console.log('PFC yang direkomendasikan:', {
+        protein,
+        fats,
+        carbs,
+        calories,
+      });
+    } catch (error) {
+      console.error('Error menghitung PFC:', error);
+    }
+  };
+
   const handleNext = () => {
-    router.replace('/screens/Start/Register');
+    router.push('/pages/DiaryPage');
   };
 
   return (

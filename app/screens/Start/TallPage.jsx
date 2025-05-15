@@ -2,6 +2,7 @@ import { StyleSheet, Text, View, FlatList } from 'react-native';
 import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ITEM_HEIGHT = 40; // Tinggi setiap item dalam daftar
 
@@ -10,9 +11,10 @@ const TallPage = () => {
   const [selectedCm, setSelectedCm] = useState('50');
   const router = useRouter();
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const height = `${selectedMeter}.${selectedCm}`;
-    router.replace('/screens/Start/WeightPage'); // Replace with the next page route
+    await AsyncStorage.setItem('height', height);
+    router.push('/screens/Start/WeightPage'); // Replace with the next page route
   };
 
   const renderMeterItem = ({ item }) => (

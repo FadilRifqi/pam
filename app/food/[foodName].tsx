@@ -24,7 +24,10 @@ export default function FoodList() {
   const router = useRouter();
 
   // Type-safe food lookup
-  const foods = foodName && foodOptions[foodName as keyof FoodOptions] ? foodOptions[foodName as keyof FoodOptions] : [];
+  const foods =
+    foodName && foodOptions[foodName as keyof FoodOptions]
+      ? foodOptions[foodName as keyof FoodOptions]
+      : [];
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
@@ -45,7 +48,7 @@ export default function FoodList() {
         onCancel={() => setSelected(null)}
         onConfirm={(grams: number) => {
           const encodedFood = encodeURIComponent(selected || '');
-          router.replace({
+          router.push({
             pathname: `/meal/[mealType]`,
             params: {
               addItem: 'true',

@@ -11,9 +11,9 @@ type MealListProps = {
 export default function MealList({ name, calories, time }: MealListProps) {
   const router = useRouter();
 
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * Handles the press event on the meal card. 
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+ * Handles the press event on the meal card.
 
 /*******  a94b5df6-6615-4b70-a6fa-5db3af263881  *******/
   const handlePress = () => {

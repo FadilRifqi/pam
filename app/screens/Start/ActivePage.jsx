@@ -2,17 +2,19 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ActivePage = () => {
-  const [selectedGoal, setSelectedGoal] = useState('Sedentary');
+  const [selectedActive, setSelectedActive] = useState('Sedentary');
   const router = useRouter();
 
   const handleGoalSelection = (goal) => {
-    setSelectedGoal(goal);
+    setSelectedActive(goal);
   };
 
-  const handleNext = () => {
-    router.replace('/screens/Start/TallPage');
+  const handleNext = async () => {
+    await AsyncStorage.setItem('active', selectedActive);
+    router.push('/screens/Start/TallPage');
   };
   return (
     <View style={styles.container1}>
@@ -25,7 +27,9 @@ const ActivePage = () => {
       <View style={styles.container2}>
         <TouchableOpacity
           style={
-            selectedGoal === 'Sedentary' ? styles.buttonSelected : styles.button
+            selectedActive === 'Sedentary'
+              ? styles.buttonSelected
+              : styles.button
           }
           onPress={() => handleGoalSelection('Sedentary')}
         >
@@ -33,7 +37,7 @@ const ActivePage = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={
-            selectedGoal === 'Low Active'
+            selectedActive === 'Low Active'
               ? styles.buttonSelected
               : styles.button
           }
@@ -43,7 +47,7 @@ const ActivePage = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={
-            selectedGoal === 'Active' ? styles.buttonSelected : styles.button
+            selectedActive === 'Active' ? styles.buttonSelected : styles.button
           }
           onPress={() => handleGoalSelection('Active')}
         >
@@ -51,7 +55,7 @@ const ActivePage = () => {
         </TouchableOpacity>
         <TouchableOpacity
           style={
-            selectedGoal === 'Very Active'
+            selectedActive === 'Very Active'
               ? styles.buttonSelected
               : styles.button
           }

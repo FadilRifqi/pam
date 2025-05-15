@@ -2,6 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const GoalScreen = () => {
   const [selectedGoal, setSelectedGoal] = useState('Lose Weight');
@@ -11,8 +12,9 @@ const GoalScreen = () => {
     setSelectedGoal(goal);
   };
 
-  const handleNext = () => {
-    router.replace('/screens/Start/GenderPage');
+  const handleNext = async () => {
+    await AsyncStorage.setItem('goal', selectedGoal);
+    router.push('/screens/Start/GenderPage');
   };
 
   return (

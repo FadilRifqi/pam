@@ -12,7 +12,8 @@ export default function SplashScreen() {
   const splashData = [
     {
       title: 'Welcome!',
-      description: 'Congratulations on taking the first step toward a healthier you!',
+      description:
+        'Congratulations on taking the first step toward a healthier you!',
       image: require('../../../assets/images/splash1.png'),
     },
     {
@@ -37,19 +38,19 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <ThemedContent 
+      <ThemedContent
         title={splashData[screenIndex].title}
         description={splashData[screenIndex].description}
         image={splashData[screenIndex].image}
         imageSize="large"
       />
-      
-      <ThemedScreenIndicator 
-        currentIndex={screenIndex} 
-        total={splashData.length} 
+
+      <ThemedScreenIndicator
+        currentIndex={screenIndex}
+        total={splashData.length}
       />
-      
-      <ThemedButton 
+
+      <ThemedButton
         variant="circle"
         icon={require('../../../assets/images/next.png')}
         onPress={handleNext}
@@ -60,10 +61,10 @@ export default function SplashScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center', 
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
     position: 'relative',
   },

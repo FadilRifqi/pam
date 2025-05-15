@@ -9,10 +9,16 @@ export default function Index() {
     const checkUserData = async () => {
       try {
         const userData = await AsyncStorage.getItem('userData');
+
         if (userData) {
           // Jika userData ada, arahkan ke halaman Home
+          const recommendedPFC = await AsyncStorage.getItem('recommendedPFC');
+          if (!recommendedPFC) {
+            // Jika recommendedPFC tidak ada, arahkan ke halaman GoalScreen
+            setInitialRoute({ href: '/screens/Start/GoalScreen' });
+          }
           setInitialRoute({
-            href: '/screens/Splash/SplashScreen',
+            href: '/pages/DiaryPage',
             data: JSON.parse(userData),
           });
         } else {

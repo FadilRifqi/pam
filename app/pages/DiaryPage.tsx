@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig'; // Ensure auth is properly configured
 import {
   View,
   Text,
@@ -52,6 +54,7 @@ function DiaryPage() {
   });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null); // State untuk email
   const [meals, setMeals] = useState<Meal[]>([]); // State untuk daftar makanan
   const [modalVisible, setModalVisible] = useState(false); // State untuk modal
   const [mealInput, setMealInput] = useState<Meal>({
@@ -68,6 +71,21 @@ function DiaryPage() {
         const dateKey = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
         const storedInput = await AsyncStorage.getItem(`input${dateKey}`);
         const storedMeals = await AsyncStorage.getItem(`meals_${dateKey}`);
+
+        // Save to Firestore
+        const userEmail = email; // Ensure email is fetched and set in state
+
+        if (userEmail) {
+          const userDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
+
+          await setDoc(userDocRef, {
+            input: storedInput ? JSON.parse(storedInput) : null,
+            meals: storedMeals ? JSON.parse(storedMeals) : [],
+          });
+
+          console.log('Data saved to Firestore');
+        }
+
         if (storedMeals) {
           setMeals(JSON.parse(storedMeals));
           console.log('Meals:', JSON.parse(storedMeals));
@@ -102,6 +120,7 @@ function DiaryPage() {
           const parsedData = JSON.parse(userData);
           setProfileImage(parsedData.photo); // Ambil URI gambar profil
           setUserName(parsedData.name); // Ambil nama pengguna
+          setEmail(parsedData.email); // Ambil email pengguna
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -136,7 +155,7 @@ function DiaryPage() {
   };
 
   const handleUserProfile = () => {
-    router.push('/screens/User/Settings');
+    router.push('/Profile/Main');
   };
 
   return (

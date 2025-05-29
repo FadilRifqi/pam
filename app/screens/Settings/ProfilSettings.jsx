@@ -13,12 +13,21 @@ const ProfilSettings = () => {
     router.push('/screens/Settings/MeSettings');
   };
 
+  const handleLogout = async () => {
+    console.log('tes');
+
+    await AsyncStorage.removeItem('userData');
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Image source={require('../../../assets/images/back-button.png')} style={styles.icon} />
+          <Image
+            source={require('../../../assets/images/back-button.png')}
+            style={styles.icon}
+          />
         </TouchableOpacity>
         <Text style={styles.title}>Profil</Text>
       </View>
@@ -33,26 +42,28 @@ const ProfilSettings = () => {
         <Text style={styles.email}>user@example.com</Text>
       </View>
 
-    {/* Tombol Hijau */}
-        <View style={styles.greenButtonsContainer}>
-          <TouchableOpacity style={styles.greenButton} onPress={handleMeNext}>
-            <Text style={styles.greenButtonText}>Me</Text>
-            <Image
-              source={require('../../../assets/images/Me-button.png')} // Ganti dengan path ikon Anda
-              style={styles.icon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.greenButton}>
-            <Text style={styles.greenButtonText} onPress={handleMeNext}>Calorie Intake</Text>
-            <Text style={styles.greenButtonRightText}>3400</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.greenButton}>
-            <Text style={styles.greenButtonText}>Weight Unit</Text>
-            <Text style={styles.greenButtonRightText}>Kilograms</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Tombol Hijau */}
+      <View style={styles.greenButtonsContainer}>
+        <TouchableOpacity style={styles.greenButton} onPress={handleMeNext}>
+          <Text style={styles.greenButtonText}>Me</Text>
+          <Image
+            source={require('../../../assets/images/Me-button.png')} // Ganti dengan path ikon Anda
+            style={styles.icon}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.greenButton}>
+          <Text style={styles.greenButtonText} onPress={handleMeNext}>
+            Calorie Intake
+          </Text>
+          <Text style={styles.greenButtonRightText}>3400</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.greenButton}>
+          <Text style={styles.greenButtonText}>Weight Unit</Text>
+          <Text style={styles.greenButtonRightText}>Kilograms</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Garis Pembatas */}
+      {/* Garis Pembatas */}
       <View style={styles.divider} />
 
       {/* Tombol Lainnya */}
@@ -85,7 +96,7 @@ const ProfilSettings = () => {
           />
           <Text style={styles.otherButtonText}>Settings</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.otherButton}>
+        <TouchableOpacity onPress={handleLogout} style={styles.otherButton}>
           <Image
             source={require('../../../assets/images/logout.png')} // Ganti dengan path ikon Anda
             style={styles.icon}

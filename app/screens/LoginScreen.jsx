@@ -12,9 +12,15 @@ import {
   TouchableOpacity,
   View,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
+} from 'firebase/auth';
 import { useRouter } from 'expo-router';
+import { auth } from '../config/firebaseConfig';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -30,6 +36,29 @@ const LoginScreen = () => {
     });
   }, []);
 
+  const handleRegister = async (name, email, password) => {
+    try {
+      // Jika email belum terdaftar, lanjutkan proses registrasi
+      const registeredUser = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = registeredUser.user;
+
+      const userData = { name, email, photo: profileImage };
+      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+
+      router.push('/screens/Start/GoalScreen');
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        return;
+      }
+      Alert.alert(error.code);
+      console.error('Registration Error:', error.code);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       setIsSubmitting(true);
@@ -38,6 +67,8 @@ const LoginScreen = () => {
         const { idToken, user } = response.data;
 
         await AsyncStorage.setItem('userData', JSON.stringify(user));
+
+        await handleRegister(user.name, user.email, 'password123');
 
         // Cek apakah data penting sudah ada
         const [recommendedPFC, goal, gender] = await Promise.all([

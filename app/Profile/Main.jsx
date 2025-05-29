@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -31,20 +32,31 @@ const ProfilSettings = () => {
 
   const handleAccountNext = () => {
     router.push('/Profile/Settings/Account');
-  }
-  
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('userData');
+    router.replace('/');
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Image source={require('../../assets/images/back-button.png')} style={styles.icon} />
+          <Image
+            source={require('../../assets/images/back-button.png')}
+            style={styles.icon}
+          />
         </TouchableOpacity>
         <Text style={styles.title}>Profil</Text>
       </View>
 
       {/* Foto Profil */}
-      <TouchableOpacity onPress={handleAccountNext}style={styles.profileContainer}>
+      <TouchableOpacity
+        onPress={handleAccountNext}
+        style={styles.profileContainer}
+      >
         <Image
           source={{ uri: 'https://via.placeholder.com/150' }} // Ganti dengan URL foto profil
           style={styles.profileImage}
@@ -53,26 +65,29 @@ const ProfilSettings = () => {
         <Text style={styles.email}>user@example.com</Text>
       </TouchableOpacity>
 
-    {/* Tombol Hijau */}
-        <View style={styles.greenButtonsContainer}>
-          <TouchableOpacity style={styles.greenButton} onPress={handleMeNext}>
-            <Text style={styles.greenButtonText}>Me</Text>
-            <Image
-              source={require('../../assets/images/Me-button.png')} // Ganti dengan path ikon Anda
-              style={styles.icon}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.greenButton} onPress={handleCalorieIntakeNext}>
-            <Text style={styles.greenButtonText}>Calorie Intake</Text>
-            <Text style={styles.greenButtonRightText}>3400</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.greenButton}>
-            <Text style={styles.greenButtonText}>Weight Unit</Text>
-            <Text style={styles.greenButtonRightText}>Kilograms</Text>
-          </TouchableOpacity>
-        </View>
+      {/* Tombol Hijau */}
+      <View style={styles.greenButtonsContainer}>
+        <TouchableOpacity style={styles.greenButton} onPress={handleMeNext}>
+          <Text style={styles.greenButtonText}>Me</Text>
+          <Image
+            source={require('../../assets/images/Me-button.png')} // Ganti dengan path ikon Anda
+            style={styles.icon}
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.greenButton}
+          onPress={handleCalorieIntakeNext}
+        >
+          <Text style={styles.greenButtonText}>Calorie Intake</Text>
+          <Text style={styles.greenButtonRightText}>3400</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.greenButton}>
+          <Text style={styles.greenButtonText}>Weight Unit</Text>
+          <Text style={styles.greenButtonRightText}>Kilograms</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Garis Pembatas */}
+      {/* Garis Pembatas */}
       <View style={styles.divider} />
 
       {/* Tombol Lainnya */}
@@ -89,23 +104,29 @@ const ProfilSettings = () => {
             source={require('../../assets/images/contactus.png')} // Ganti dengan path ikon Anda
             style={styles.icon}
           />
-          <Text style={styles.otherButtonText} onPress={handleContactUstNext}>Contact Us</Text>
+          <Text style={styles.otherButtonText} onPress={handleContactUstNext}>
+            Contact Us
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.otherButton}>
           <Image
             source={require('../../assets/images/aboutapp.png')} // Ganti dengan path ikon Anda
             style={styles.icon}
           />
-          <Text style={styles.otherButtonText} onPress={handleAboutNext}>About App</Text>
+          <Text style={styles.otherButtonText} onPress={handleAboutNext}>
+            About App
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.otherButton}>
           <Image
             source={require('../../assets/images/settings.png')} // Ganti dengan path ikon Anda
             style={styles.icon}
           />
-          <Text style={styles.otherButtonText} onPress={handleSettingstNext}>Settings</Text>
+          <Text style={styles.otherButtonText} onPress={handleSettingstNext}>
+            Settings
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.otherButton}>
+        <TouchableOpacity onPress={handleLogout} style={styles.otherButton}>
           <Image
             source={require('../../assets/images/logout.png')} // Ganti dengan path ikon Anda
             style={styles.icon}

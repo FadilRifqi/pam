@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const Main = () => {
@@ -17,15 +17,15 @@ const Main = () => {
 
   const handleLanguageNext = () => {
     router.push('/Profile/Settings/Language');
-  }
+  };
 
   const handleChangePasswordNext = () => {
     router.push('/Profile/Settings/ChangePassword');
-  }
+  };
 
   const handleAccountNext = () => {
     router.push('/Profile/Settings/Account');
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -42,15 +42,18 @@ const Main = () => {
 
       <ScrollView style={styles.scrollContainer}>
         {/* Foto Profil */}
-        <TouchableOpacity onPress={handleAccountNext}style={styles.profileContainer}>
-            <Image
+        <TouchableOpacity
+          onPress={handleAccountNext}
+          style={styles.profileContainer}
+        >
+          <Image
             source={{ uri: 'https://via.placeholder.com/150' }} // Ganti dengan URL foto profil
             style={styles.profileImage}
-            />
-            <View style={styles.profileUserContainer}>
+          />
+          <View style={styles.profileUserContainer}>
             <Text style={styles.username}>Username</Text>
             <Text style={styles.email}>user@example.com</Text>
-            </View>
+          </View>
         </TouchableOpacity>
 
         <View style={styles.divider} />
@@ -59,7 +62,10 @@ const Main = () => {
         <View style={styles.settingsSection}>
           <View style={styles.settingItem}>
             <View style={styles.settingLabelGroup}>
-              <Image source={require('../../../assets/images/weight-unit.png')} style={styles.settingIcon} />
+              <Image
+                source={require('../../../assets/images/weight-unit.png')}
+                style={styles.settingIcon}
+              />
               <Text style={styles.settingLabel}>Weight Unit</Text>
             </View>
             <View style={styles.settingValueContainer}>
@@ -70,7 +76,10 @@ const Main = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingLabelGroup}>
-              <Image source={require('../../../assets/images/height-unit.png')} style={styles.settingIcon} />
+              <Image
+                source={require('../../../assets/images/height-unit.png')}
+                style={styles.settingIcon}
+              />
               <Text style={styles.settingLabel}>Height Unit</Text>
             </View>
             <View style={styles.settingValueContainer}>
@@ -81,7 +90,10 @@ const Main = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingLabelGroup}>
-              <Image source={require('../../../assets/images/water-service.png')} style={styles.settingIcon} />
+              <Image
+                source={require('../../../assets/images/water-service.png')}
+                style={styles.settingIcon}
+              />
               <Text style={styles.settingLabel}>Water serving size</Text>
             </View>
             <View style={styles.settingValueContainer}>
@@ -90,9 +102,15 @@ const Main = () => {
           </View>
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.settingItem} onPress={handleLanguageNext}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={handleLanguageNext}
+          >
             <View style={styles.settingLabelGroup}>
-              <Image source={require('../../../assets/images/Language.png')} style={styles.settingIcon} />
+              <Image
+                source={require('../../../assets/images/Language.png')}
+                style={styles.settingIcon}
+              />
               <Text style={styles.settingLabel}>Language</Text>
             </View>
             <View style={styles.settingValueContainer}>
@@ -103,7 +121,10 @@ const Main = () => {
 
           <View style={styles.settingItem}>
             <View style={styles.settingLabelGroup}>
-              <Image source={require('../../../assets/images/theme.png')} style={styles.settingIcon} />
+              <Image
+                source={require('../../../assets/images/theme.png')}
+                style={styles.settingIcon}
+              />
               <Text style={styles.settingLabel}>Theme</Text>
             </View>
             <View style={styles.settingValueContainer}>
@@ -112,7 +133,10 @@ const Main = () => {
           </View>
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.settingItem} onPress={handleChangePasswordNext}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={handleChangePasswordNext}
+          >
             <Text style={styles.settingLabelPassword}>Change Password</Text>
           </TouchableOpacity>
           <View style={styles.divider} />
@@ -193,14 +217,12 @@ const styles = StyleSheet.create({
   },
   settingsSection: {
     marginBottom: 30,
-    
   },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
-    
   },
   settingLabelGroup: {
     flexDirection: 'row',
@@ -276,5 +298,5 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#35CC8C',
-  }
+  },
 });

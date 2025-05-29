@@ -12,6 +12,8 @@ export default function Index() {
 
         if (userData) {
           // Jika userData ada, arahkan ke halaman Home
+          console.log('User data found:', JSON.parse(userData));
+
           const recommendedPFC = await AsyncStorage.getItem('recommendedPFC');
           if (!recommendedPFC) {
             // Jika recommendedPFC tidak ada, arahkan ke halaman GoalScreen

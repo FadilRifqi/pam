@@ -93,7 +93,7 @@ export default function Recipes() {
   };
 
   const handleUserProfile = () => {
-    router.push('/screens/User/Settings');
+    router.push('/Profile/Main');
   };
 
   return (

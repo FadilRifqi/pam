@@ -12,6 +12,8 @@ import { LineChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
 import Footer from '../Components/Footer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig'; // Pastikan konfigurasi Firestore sudah benar
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -31,13 +33,27 @@ const ReportsScreen = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Ambil history dan berat awal dari AsyncStorage
-        const storedHistory = await AsyncStorage.getItem('weightHistory');
-        let historyArray: WeightEntry[] = storedHistory
-          ? JSON.parse(storedHistory)
-          : [];
+        // Ambil email pengguna dari AsyncStorage
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedUserData = userData ? JSON.parse(userData) : null;
 
-        const storedInitialWeight = await AsyncStorage.getItem('weight');
+        if (!parsedUserData || !parsedUserData.email) {
+          console.error('User email not found in AsyncStorage.');
+          return;
+        }
+
+        const userEmail = parsedUserData.email; // Ambil email dari AsyncStorage
+        const userDocRef = doc(db, 'users', userEmail, 'data', 'weight');
+        const userDoc = await getDoc(userDocRef);
+
+        let historyArray: WeightEntry[] = [];
+        let initialWeight = null;
+
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          historyArray = data.weightHistory || [];
+          initialWeight = data.initialWeight || null;
+        }
 
         // Ambil tanggal hari ini dalam format yg sama
         const todayDate = new Date().toLocaleDateString('en-US', {
@@ -46,29 +62,30 @@ const ReportsScreen = () => {
           year: 'numeric',
         });
 
-        if (storedInitialWeight) {
-          const weightNum = parseFloat(storedInitialWeight);
-          setInitialWeight(weightNum);
+        if (initialWeight !== null) {
+          setInitialWeight(initialWeight);
 
           // Cek apakah berat awal sudah ada di history untuk hari ini
           const hasInitialInHistory = historyArray.some(
-            (entry) => entry.weight === weightNum && entry.date === todayDate
+            (entry) =>
+              entry.weight === initialWeight && entry.date === todayDate
           );
 
           // Kalau belum ada, tambahkan di awal history
           if (!hasInitialInHistory) {
             const newEntry: WeightEntry = {
               id: Date.now().toString(),
-              weight: weightNum,
+              weight: initialWeight,
               fromBeginning: 0, // Karena ini berat awal
               date: todayDate,
             };
             historyArray = [newEntry, ...historyArray];
 
-            // Simpan kembali ke AsyncStorage
-            await AsyncStorage.setItem(
-              'weightHistory',
-              JSON.stringify(historyArray)
+            // Simpan kembali ke Firestore
+            await setDoc(
+              userDocRef,
+              { weightHistory: historyArray },
+              { merge: true }
             );
           }
         }
@@ -83,22 +100,6 @@ const ReportsScreen = () => {
     fetchData();
   }, []);
 
-  // Save history setiap kali history berubah
-  useEffect(() => {
-    const saveHistory = async () => {
-      try {
-        await AsyncStorage.setItem(
-          'weightHistory',
-          JSON.stringify(weightHistory)
-        );
-      } catch (error) {
-        console.error('Error saving weight history:', error);
-      }
-    };
-
-    saveHistory();
-  }, [weightHistory]);
-
   const addWeightEntry = async () => {
     if (!currentWeight) {
       Alert.alert('Error', 'Please enter a valid weight');
@@ -111,25 +112,57 @@ const ReportsScreen = () => {
       return;
     }
 
-    // Jika ini pertama kali menambah berat, simpan sebagai initialWeight
-    if (weightHistory.length === 0) {
-      await AsyncStorage.setItem('weight', parsedWeight.toString());
-      setInitialWeight(parsedWeight);
+    try {
+      // Ambil email pengguna dari AsyncStorage
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+
+      if (!parsedUserData || !parsedUserData.email) {
+        console.error('User email not found in AsyncStorage.');
+        return;
+      }
+
+      const userEmail = parsedUserData.email;
+      const userDocRef = doc(db, 'users', userEmail, 'data', 'weight');
+
+      // Jika ini pertama kali menambah berat, simpan sebagai initialWeight
+      if (weightHistory.length === 0) {
+        setInitialWeight(parsedWeight);
+        await setDoc(
+          userDocRef,
+          { initialWeight: parsedWeight },
+          { merge: true }
+        );
+      }
+
+      const newEntry: WeightEntry = {
+        id: Date.now().toString(),
+        weight: parsedWeight,
+        fromBeginning:
+          initialWeight !== null ? parsedWeight - initialWeight : 0,
+        date: new Date().toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+      };
+
+      const updatedHistory = [newEntry, ...weightHistory];
+      setWeightHistory(updatedHistory);
+
+      // Simpan weightHistory ke Firestore
+      await setDoc(
+        userDocRef,
+        { weightHistory: updatedHistory },
+        { merge: true }
+      );
+
+      console.log('Weight entry added to Firestore:', newEntry);
+      setCurrentWeight('');
+    } catch (error) {
+      console.error('Error adding weight entry to Firestore:', error);
+      Alert.alert('Error', 'Failed to add weight entry.');
     }
-
-    const newEntry: WeightEntry = {
-      id: Date.now().toString(),
-      weight: parsedWeight,
-      fromBeginning: initialWeight !== null ? parsedWeight - initialWeight : 0,
-      date: new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }),
-    };
-
-    setWeightHistory([newEntry, ...weightHistory]);
-    setCurrentWeight('');
   };
 
   const clearWeightHistory = () => {
@@ -143,39 +176,49 @@ const ReportsScreen = () => {
         style: 'destructive',
         onPress: async () => {
           try {
-            // Hapus weightHistory dari AsyncStorage
-            await AsyncStorage.removeItem('weightHistory');
+            // Ambil email pengguna dari AsyncStorage
+            const userData = await AsyncStorage.getItem('userData');
+            const parsedUserData = userData ? JSON.parse(userData) : null;
 
-            // Ambil berat awal dari AsyncStorage
-            const storedWeight = await AsyncStorage.getItem('weight');
-            let newHistory: WeightEntry[] = [];
-
-            if (storedWeight) {
-              const initialWeight = parseFloat(storedWeight);
-
-              // Tambahkan berat awal sebagai entri pertama
-              const todayDate = new Date().toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              });
-
-              const initialEntry: WeightEntry = {
-                id: Date.now().toString(),
-                weight: initialWeight,
-                fromBeginning: 0, // Karena ini adalah berat awal
-                date: todayDate,
-              };
-
-              newHistory = [initialEntry];
+            if (!parsedUserData || !parsedUserData.email) {
+              console.error('User email not found in AsyncStorage.');
+              return;
             }
 
-            // Perbarui state dan simpan kembali ke AsyncStorage
+            const userEmail = parsedUserData.email;
+            const userDocRef = doc(db, 'users', userEmail, 'data', 'weight');
+
+            // Hapus weightHistory dari Firestore
+            await setDoc(userDocRef, { weightHistory: [] }, { merge: true });
+
+            // Ambil berat awal dari Firestore
+            const userDoc = await getDoc(userDocRef);
+            let newHistory: WeightEntry[] = [];
+
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              const initialWeight = data.initialWeight;
+
+              if (initialWeight !== null) {
+                const todayDate = new Date().toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                });
+
+                const initialEntry: WeightEntry = {
+                  id: Date.now().toString(),
+                  weight: initialWeight,
+                  fromBeginning: 0, // Karena ini adalah berat awal
+                  date: todayDate,
+                };
+
+                newHistory = [initialEntry];
+              }
+            }
+
+            // Perbarui state
             setWeightHistory(newHistory);
-            await AsyncStorage.setItem(
-              'weightHistory',
-              JSON.stringify(newHistory)
-            );
           } catch (error) {
             console.error('Error clearing weight history:', error);
             Alert.alert('Error', 'Failed to clear history.');
@@ -184,6 +227,7 @@ const ReportsScreen = () => {
       },
     ]);
   };
+
   const renderItem = ({ item }: { item: WeightEntry }) => (
     <View style={styles.weightEntry}>
       <View style={styles.weightRow}>

@@ -1,9 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const ProfilSettings = () => {
   const router = useRouter();
+  const [profileImage, setProfileImage] = React.useState(null);
+  const [username, setUsername] = React.useState('Username');
 
   const handleBack = () => {
     router.back();
@@ -18,6 +21,23 @@ const ProfilSettings = () => {
 
     await AsyncStorage.removeItem('userData');
   };
+
+  useEffect(() => {
+    // get user data from AsyncStorage
+    const fetchUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        if (userData) {
+          const parsedUserData = JSON.parse(userData);
+          setUsername(parsedUserData.name || 'Username');
+          setProfileImage(parsedUserData.photo || null);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -35,10 +55,10 @@ const ProfilSettings = () => {
       {/* Foto Profil */}
       <View style={styles.profileContainer}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/150' }} // Ganti dengan URL foto profil
+          source={{ uri: profileImage }} // Ganti dengan URL foto profil
           style={styles.profileImage}
         />
-        <Text style={styles.username}>Username</Text>
+        <Text style={styles.username}>{username}</Text>
         <Text style={styles.email}>user@example.com</Text>
       </View>
 

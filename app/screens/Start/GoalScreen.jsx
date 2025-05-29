@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const GoalScreen = () => {
   const [selectedGoal, setSelectedGoal] = useState('Lose Weight');
@@ -13,8 +15,34 @@ const GoalScreen = () => {
   };
 
   const handleNext = async () => {
-    await AsyncStorage.setItem('goal', selectedGoal);
-    router.push('/screens/Start/GenderPage');
+    try {
+      // Ambil email pengguna dari AsyncStorage
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+
+      if (!parsedUserData || !parsedUserData.email) {
+        console.warn('User email not found in AsyncStorage.');
+        return;
+      }
+
+      const userEmail = parsedUserData.email;
+
+      // Simpan goal ke Firestore
+      const userDocRef = doc(db, 'users', userEmail);
+      await setDoc(
+        userDocRef,
+        { goal: selectedGoal }, // Simpan goal
+        { merge: true } // Gabungkan dengan data yang ada
+      );
+
+      console.log('Goal saved to Firestore:', selectedGoal);
+
+      // Lanjutkan ke halaman berikutnya
+      router.push('/screens/Start/GenderPage');
+    } catch (error) {
+      console.error('Error saving goal to Firestore:', error);
+      Alert.alert('Error', 'Failed to save goal. Please try again.');
+    }
   };
 
   return (

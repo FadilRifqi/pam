@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '../../config/firebaseConfig';
 import ThemedButton from '../../../components/ThemedButton';
 import Toast from '../../../components/Toast';
@@ -77,6 +77,7 @@ const Register = () => {
     }
 
     try {
+      // Buat akun pengguna di Firebase Authentication
       const registeredUser = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -84,9 +85,16 @@ const Register = () => {
       );
       const user = registeredUser.user;
 
+      // Perbarui profil pengguna dengan displayName
+      await updateProfile(user, {
+        displayName: name,
+      });
+
+      // Simpan data pengguna ke AsyncStorage
       const userData = { name, email, photo: profileImage };
       await AsyncStorage.setItem('userData', JSON.stringify(userData));
 
+      // Arahkan ke halaman berikutnya
       router.push('/screens/Start/GoalScreen');
     } catch (error) {
       setToast({ visible: true, message: error.message, type: 'error' });

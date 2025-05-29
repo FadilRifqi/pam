@@ -1,28 +1,29 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { db } from '../config/firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const CalorieIntakeSettings = () => {
   const router = useRouter();
-  const [userData, setUserData] = useState({
-    calories: '2500',
-    proteins: '150g',
-    fats: '83g',
-    carbs: '313g',
-    water: '3000ml'
-  });
-  
+  const [waterIntake, setWaterIntake] = useState();
+  const [calories, setCalories] = useState();
+  const [proteins, setProteins] = useState();
+  const [fats, setFats] = useState();
+  const [carbs, setCarbs] = useState();
+
   // State for modal
   const [modalVisible, setModalVisible] = useState(false);
   const [editField, setEditField] = useState(null);
@@ -41,24 +42,116 @@ const CalorieIntakeSettings = () => {
 
   const handleEdit = (field) => {
     setEditField(field);
-    setTempValue(userData[field]);
+
+    // Tentukan nilai sementara berdasarkan field yang dipilih
+    switch (field) {
+      case 'calories':
+        setTempValue(calories?.toString() || '');
+        break;
+      case 'proteins':
+        setTempValue(proteins?.toString() || '');
+        break;
+      case 'fats':
+        setTempValue(fats?.toString() || '');
+        break;
+      case 'carbs':
+        setTempValue(carbs?.toString() || '');
+        break;
+      case 'water':
+        setTempValue(waterIntake?.toString() || '');
+        break;
+      default:
+        setTempValue('');
+    }
+
     setModalVisible(true);
   };
 
-  const handleSave = () => {
-    // Show the confirmation popup
-    setSaveConfirmVisible(true);
+  const handleSave = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+
+      if (!parsedUserData || !parsedUserData.email) {
+        Alert.alert('Error', 'User email not found. Please log in again.');
+        return;
+      }
+
+      // Data yang akan disimpan ke Firestore
+      const updatedRecommendedPFC = {
+        protein: proteins,
+        fats: fats,
+        carbs: carbs,
+        calories: calories,
+        water: waterIntake,
+      };
+
+      // Simpan data ke Firestore
+      const userDocRef = doc(db, 'users', parsedUserData.email);
+      await setDoc(
+        userDocRef,
+        { recommendedPFC: updatedRecommendedPFC },
+        { merge: true }
+      );
+
+      // Tampilkan pesan sukses
+      Alert.alert('Success', 'Your recommended PFC has been updated.');
+      setSaveConfirmVisible(false); // Tutup modal konfirmasi
+    } catch (error) {
+      console.error('Error saving recommendedPFC:', error);
+      Alert.alert('Error', 'Failed to save your recommended PFC.');
+    }
   };
-  
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedUserData = userData ? JSON.parse(userData) : null;
+
+        if (parsedUserData && parsedUserData.email) {
+          // Ambil dokumen pengguna dari Firestore
+          const userDocRef = doc(db, 'users', parsedUserData.email);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const userDataFromFirestore = userDoc.data();
+
+            // Ambil recommendedPFC dari dokumen Firestore
+            if (userDataFromFirestore.recommendedPFC) {
+              const { protein, fats, carbs, calories, water } =
+                userDataFromFirestore.recommendedPFC;
+
+              // Perbarui state dengan data yang diambil
+              setProteins(protein);
+              setFats(fats);
+              setCarbs(carbs);
+              setCalories(calories);
+              setWaterIntake(water);
+            } else {
+              console.warn('No recommendedPFC found in Firestore.');
+            }
+          } else {
+            console.warn('User document does not exist in Firestore.');
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching recommendedPFC:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   const handleConfirmSave = () => {
     // Check if the checkbox is checked
     if (isChecked) {
       console.log('Saving nutrition data:', userData);
       // Implement save functionality here
-      
+
       // Show success message
       Alert.alert('Success', 'Your settings have been saved.');
-      
+
       // Hide the popup
       setSaveConfirmVisible(false);
     } else {
@@ -66,9 +159,7 @@ const CalorieIntakeSettings = () => {
       Alert.alert(
         'Action Required',
         'Please check the "Update daily nutrients" option to save your changes.',
-        [
-          { text: 'OK', onPress: () => console.log('Alert closed') }
-        ]
+        [{ text: 'OK', onPress: () => console.log('Alert closed') }]
       );
     }
   };
@@ -77,38 +168,54 @@ const CalorieIntakeSettings = () => {
     // Just hide the popup
     setSaveConfirmVisible(false);
   };
-  
+
   const toggleCheckbox = () => {
     const toValue = isChecked ? 0 : 1;
-    
+
     Animated.sequence([
       Animated.timing(checkAnimation, {
         toValue: 0,
         duration: 150,
-        useNativeDriver: true
+        useNativeDriver: true,
       }),
       Animated.timing(checkAnimation, {
         toValue,
         duration: 150,
-        useNativeDriver: true
-      })
+        useNativeDriver: true,
+      }),
     ]).start();
-    
+
     setIsChecked(!isChecked);
   };
-  
+
   const handleModalDone = () => {
-    // Update the user data with the temporary value
-    setUserData({
-      ...userData,
-      [editField]: tempValue
-    });
+    // Perbarui state berdasarkan field yang sedang diedit
+    switch (editField) {
+      case 'calories':
+        setCalories(tempValue);
+        break;
+      case 'proteins':
+        setProteins(tempValue);
+        break;
+      case 'fats':
+        setFats(tempValue);
+        break;
+      case 'carbs':
+        setCarbs(tempValue);
+        break;
+      case 'water':
+        setWaterIntake(tempValue);
+        break;
+      default:
+        break;
+    }
+
     setModalVisible(false);
   };
-  
+
   // Helper function to render the appropriate modal content based on field
   const renderModalContent = () => {
-    switch(editField) {
+    switch (editField) {
       case 'calories':
         return (
           <View style={styles.modalContent}>
@@ -124,7 +231,7 @@ const CalorieIntakeSettings = () => {
             </View>
           </View>
         );
-      
+
       case 'proteins':
         return (
           <View style={styles.modalContent}>
@@ -135,12 +242,12 @@ const CalorieIntakeSettings = () => {
                 placeholder="Enter protein (g)"
                 keyboardType="numeric"
                 value={tempValue.replace('g', '')}
-                onChangeText={(text) => setTempValue(`${text}g`)}
+                onChangeText={(text) => setTempValue({ text })}
               />
             </View>
           </View>
         );
-      
+
       case 'fats':
         return (
           <View style={styles.modalContent}>
@@ -151,12 +258,12 @@ const CalorieIntakeSettings = () => {
                 placeholder="Enter fat (g)"
                 keyboardType="numeric"
                 value={tempValue.replace('g', '')}
-                onChangeText={(text) => setTempValue(`${text}g`)}
+                onChangeText={(text) => setTempValue({ text })}
               />
             </View>
           </View>
         );
-      
+
       case 'carbs':
         return (
           <View style={styles.modalContent}>
@@ -167,12 +274,12 @@ const CalorieIntakeSettings = () => {
                 placeholder="Enter carbs (g)"
                 keyboardType="numeric"
                 value={tempValue.replace('g', '')}
-                onChangeText={(text) => setTempValue(`${text}g`)}
+                onChangeText={(text) => setTempValue({ text })}
               />
             </View>
           </View>
         );
-      
+
       case 'water':
         return (
           <View style={styles.modalContent}>
@@ -183,12 +290,12 @@ const CalorieIntakeSettings = () => {
                 placeholder="Enter water (ml)"
                 keyboardType="numeric"
                 value={tempValue.replace('ml', '')}
-                onChangeText={(text) => setTempValue(`${text}ml`)}
+                onChangeText={(text) => setTempValue(text)}
               />
             </View>
           </View>
         );
-      
+
       default:
         return null;
     }
@@ -199,9 +306,9 @@ const CalorieIntakeSettings = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Image 
-            source={require('../../assets/images/back-button.png')} 
-            style={styles.icon} 
+          <Image
+            source={require('../../assets/images/back-button.png')}
+            style={styles.icon}
           />
         </TouchableOpacity>
         <Text style={styles.title}>Calorie Intake</Text>
@@ -210,61 +317,61 @@ const CalorieIntakeSettings = () => {
       {/* User Data List */}
       <ScrollView style={styles.dataContainer}>
         {/* Calories */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('calories')}
         >
           <Text style={styles.dataLabel}>Calories</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.calories}</Text>
+            <Text style={styles.dataValue}>{calories}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Proteins */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('proteins')}
         >
           <Text style={styles.dataLabel}>Proteins</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.proteins}</Text>
+            <Text style={styles.dataValue}>{proteins} g</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Fats */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('fats')}
         >
           <Text style={styles.dataLabel}>Fats</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.fats}</Text>
+            <Text style={styles.dataValue}>{fats} g</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Carbs */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('carbs')}
         >
           <Text style={styles.dataLabel}>Carbs</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.carbs}</Text>
+            <Text style={styles.dataValue}>{carbs} g</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Water */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('water')}
         >
           <Text style={styles.dataLabel}>Water</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.water}</Text>
+            <Text style={styles.dataValue}>{waterIntake} ml</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
@@ -272,14 +379,11 @@ const CalorieIntakeSettings = () => {
 
       {/* Save Button */}
       <View style={styles.saveButtonContainer}>
-        <TouchableOpacity 
-          style={styles.saveButton}
-          onPress={handleSave}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* Modal for editing */}
       <Modal
         animationType="slide"
@@ -288,14 +392,14 @@ const CalorieIntakeSettings = () => {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalDismiss}
             onPress={() => setModalVisible(false)}
           />
           <View style={styles.modalContainer}>
             {renderModalContent()}
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.doneButton}
               onPress={handleModalDone}
             >
@@ -304,7 +408,7 @@ const CalorieIntakeSettings = () => {
           </View>
         </View>
       </Modal>
-      
+
       {/* Modal for save confirmation */}
       <Modal
         animationType="fade"
@@ -315,9 +419,9 @@ const CalorieIntakeSettings = () => {
         <View style={styles.confirmModalOverlay}>
           <View style={styles.confirmModalContainer}>
             <Text style={styles.confirmModalTitle}>Save</Text>
-            
+
             <View style={styles.confirmModalContent}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.checkIconContainer}
                 onPress={toggleCheckbox}
               >
@@ -327,23 +431,25 @@ const CalorieIntakeSettings = () => {
                     styles.checkIcon,
                     {
                       opacity: checkAnimation,
-                      transform: [{scale: checkAnimation}]
-                    }
+                      transform: [{ scale: checkAnimation }],
+                    },
                   ]}
                 />
               </TouchableOpacity>
-              <Text style={styles.confirmModalText}>Update daily nutrients</Text>
+              <Text style={styles.confirmModalText}>
+                Update daily nutrients
+              </Text>
             </View>
-            
+
             <View style={styles.confirmButtonsRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={handleCancelSave}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.okButton}
                 onPress={handleConfirmSave}
               >
@@ -433,7 +539,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
+
   // Modal styles
   modalOverlay: {
     flex: 1,
@@ -485,7 +591,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
+
   // Save confirmation modal styles
   confirmModalOverlay: {
     flex: 1,
@@ -550,5 +656,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#35cc8c',
     fontWeight: 'bold',
-  }
+  },
 });

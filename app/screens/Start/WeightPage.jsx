@@ -3,14 +3,41 @@ import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const WeightPage = () => {
   const [weight, setWeight] = useState('');
   const router = useRouter();
 
   const handleNext = async () => {
-    await AsyncStorage.setItem('weight', weight);
-    router.push('/screens/Start/AgePage');
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+      if (!parsedUserData || !parsedUserData.email) {
+        console.warn('User email not found in AsyncStorage.');
+        return;
+      }
+      if (!parsedUserData.email) {
+        console.warn('User email is not available.');
+        return;
+      }
+
+      // Simpan data tinggi badan ke Firestore
+      const userDocRef = doc(db, 'users', parsedUserData.email); // Gunakan email sebagai ID dokumen
+      await setDoc(
+        userDocRef,
+        { weight: weight }, // Data yang akan disimpan
+        { merge: true } // Gabungkan dengan data yang ada
+      );
+
+      console.log('Weight saved to Firestore:', weight);
+
+      // Navigasi ke halaman berikutnya
+      router.push('/screens/Start/AgePage'); // Ganti dengan route halaman berikutnya
+    } catch (error) {
+      console.error('Error saving Weight to Firestore:', error);
+    }
   };
 
   return (

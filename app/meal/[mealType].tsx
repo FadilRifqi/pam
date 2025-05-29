@@ -1,5 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig'; // Pastikan konfigurasi Firestore sudah benar
 import {
   View,
   Text,
@@ -33,7 +35,7 @@ type Nutrients = {
 };
 
 export default function MealDetail() {
-  const { mealType, dateKey } = useLocalSearchParams();
+  const { mealType, dateKey, email } = useLocalSearchParams();
   const router = useRouter();
   const mealKey = (mealType as string)?.toLowerCase();
   const [currentMeal, setCurrentMeal] = useState(); // State untuk menyimpan jenis makanan
@@ -51,16 +53,22 @@ export default function MealDetail() {
   useEffect(() => {
     const fetchExistingItems = async () => {
       try {
-        const existing = await AsyncStorage.getItem(
-          `input-meals${dateKey}-${mealKey}`
-        );
+        const userDocRef = doc(db, 'users', email, 'diary', dateKey);
+        const userDoc = await getDoc(userDocRef);
 
-        if (existing) {
-          const parsed = JSON.parse(existing);
-          setItems(parsed.items || []); // Ambil items dari data yang ada
+        if (userDoc.exists()) {
+          const diaryData = userDoc.data();
+          const inputMealsKey = `input-meals${dateKey}-${mealKey}`;
+          const existingItems = diaryData.meals?.[inputMealsKey]?.items || [];
+
+          setItems(existingItems); // Set items dari Firestore
+          console.log('Existing items from Firestore:', existingItems);
+        } else {
+          console.warn('Diary document does not exist in Firestore.');
+          setItems([]); // Set items ke array kosong jika tidak ada data
         }
       } catch (error) {
-        console.error('Error fetching existing items:', error);
+        console.error('Error fetching existing items from Firestore:', error);
       }
     };
     fetchExistingItems();
@@ -142,20 +150,24 @@ export default function MealDetail() {
 
   const handleSave = async () => {
     try {
-      const existing = await AsyncStorage.getItem(`input${dateKey}`);
-      const parsed = existing ? JSON.parse(existing) : { water: 0 };
+      let existingInput = { water: 0 };
+      if (email) {
+        const userDocRef = doc(db, 'users', email, 'diary', dateKey);
+        const diaryDoc = await getDoc(userDocRef);
+
+        if (diaryDoc.exists()) {
+          const diaryData = diaryDoc.data();
+          existingInput = diaryData.input || { water: 0 }; // Use existing input data if available
+        }
+      } else {
+        console.warn('User email is not available. Skipping Firestore fetch.');
+      }
 
       // Gabungkan data lama (hanya water) dengan data baru (totals)
       const newData = {
-        ...parsed,
+        ...existingInput,
         ...totals, // calories, protein, fats, carbs dari hasil reduce
       };
-
-      await AsyncStorage.setItem(`input${dateKey}`, JSON.stringify(newData));
-      await AsyncStorage.setItem(
-        `input-meals${dateKey}-${mealKey}`,
-        JSON.stringify({ items })
-      ); // Simpan items ke AsyncStorage
 
       // Ambil data meal sebelumnya
       const storedMeals = await AsyncStorage.getItem(`meals_${dateKey}`);
@@ -176,11 +188,24 @@ export default function MealDetail() {
         });
       }
 
-      // Simpan kembali
-      await AsyncStorage.setItem(
-        `meals_${dateKey}`,
-        JSON.stringify(updatedMeals)
-      );
+      // Simpan ke Firestore
+      if (email) {
+        const userDocRef = doc(db, 'users', email, 'diary', dateKey);
+        await setDoc(
+          userDocRef,
+          {
+            input: newData,
+            meals: {
+              ...updatedMeals,
+              [`input-meals${dateKey}-${mealKey}`]: { items }, // Tambahkan data input-meals
+            },
+          },
+          { merge: true } // Gabungkan dengan data yang ada
+        );
+        console.log('Data saved to Firestore');
+      } else {
+        console.warn('User email is not available. Skipping Firestore update.');
+      }
 
       router.back(); // Kembali ke halaman sebelumnya
     } catch (error) {

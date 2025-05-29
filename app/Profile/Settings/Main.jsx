@@ -1,15 +1,58 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  TextInput,
 } from 'react-native';
+import { db } from '../../config/firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { Alert } from 'react-native';
 
 const Main = () => {
+  const [profileImage, setProfileImage] = useState(null);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [waterServingSize, setWaterServingSize] = useState(200);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [tempWaterServingSize, setTempWaterServingSize] = useState('');
   const router = useRouter();
+
+  const handleEditWaterServingSize = () => {
+    setTempWaterServingSize(waterServingSize.toString());
+    setModalVisible(true);
+  };
+
+  const handleSaveWaterServingSize = async () => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = JSON.parse(userData);
+
+      if (parsedUserData && parsedUserData.email) {
+        const userDocRef = doc(db, 'users', parsedUserData.email);
+
+        await setDoc(
+          userDocRef,
+          { waterServingSize: parseInt(tempWaterServingSize) },
+          { merge: true }
+        );
+
+        setWaterServingSize(parseInt(tempWaterServingSize));
+        setModalVisible(false);
+
+        Alert.alert('Success', 'Water serving size updated successfully.');
+      }
+    } catch (error) {
+      console.error('Error updating water serving size:', error);
+      Alert.alert('Error', 'Failed to update water serving size.');
+    }
+  };
 
   const handleBack = () => {
     router.back();
@@ -26,6 +69,35 @@ const Main = () => {
   const handleAccountNext = () => {
     router.push('/Profile/Settings/Account');
   };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedUserData = JSON.parse(userData);
+
+        if (userData) {
+          setUsername(parsedUserData.name || 'Username');
+          setProfileImage(parsedUserData.photo || null);
+          setEmail(parsedUserData.email || 'Email not available');
+        }
+
+        if (parsedUserData && parsedUserData.email) {
+          const userDocRef = doc(db, 'users', parsedUserData.email);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const userDataFromFirestore = userDoc.data();
+            setWaterServingSize(userDataFromFirestore.waterServingSize || 200);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -47,12 +119,12 @@ const Main = () => {
           style={styles.profileContainer}
         >
           <Image
-            source={{ uri: 'https://via.placeholder.com/150' }} // Ganti dengan URL foto profil
+            source={{ uri: profileImage }} // Ganti dengan URL foto profil
             style={styles.profileImage}
           />
           <View style={styles.profileUserContainer}>
-            <Text style={styles.username}>Username</Text>
-            <Text style={styles.email}>user@example.com</Text>
+            <Text style={styles.username}>{username}</Text>
+            <Text style={styles.email}>{email}</Text>
           </View>
         </TouchableOpacity>
 
@@ -83,7 +155,7 @@ const Main = () => {
               <Text style={styles.settingLabel}>Height Unit</Text>
             </View>
             <View style={styles.settingValueContainer}>
-              <Text style={styles.settingValue}>Meter</Text>
+              <Text style={styles.settingValue}>Centimeter</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -96,10 +168,44 @@ const Main = () => {
               />
               <Text style={styles.settingLabel}>Water serving size</Text>
             </View>
-            <View style={styles.settingValueContainer}>
-              <Text style={styles.settingValue}>200 ml</Text>
-            </View>
+            <TouchableOpacity onPress={handleEditWaterServingSize}>
+              <Text style={styles.settingValue}>{waterServingSize} ml</Text>
+            </TouchableOpacity>
           </View>
+
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContainer}>
+                {/* Tombol Close */}
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={styles.closeButtonText}>X</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.modalTitle}>Edit Water Serving Size</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter water serving size (ml)"
+                  keyboardType="numeric"
+                  value={tempWaterServingSize}
+                  onChangeText={setTempWaterServingSize}
+                />
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSaveWaterServingSize}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
           <View style={styles.divider} />
 
           <TouchableOpacity
@@ -298,5 +404,62 @@ const styles = StyleSheet.create({
   email: {
     fontSize: 14,
     color: '#35CC8C',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Transparansi untuk latar belakang
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '90%', // Lebar modal
+    backgroundColor: 'white', // Warna latar belakang modal
+    borderRadius: 10, // Sudut melengkung
+    padding: 20, // Padding di dalam modal
+    alignItems: 'center', // Pusatkan konten secara horizontal
+  },
+  modalTitle: {
+    fontSize: 18, // Ukuran font judul
+    fontWeight: 'bold', // Teks tebal
+    marginBottom: 20, // Jarak bawah judul
+    textAlign: 'center', // Teks rata tengah
+  },
+  input: {
+    width: '100%', // Lebar input mengikuti lebar modal
+    height: 50, // Tinggi input
+    borderWidth: 1, // Garis tepi
+    borderColor: '#ddd', // Warna garis tepi
+    borderRadius: 5, // Sudut melengkung
+    paddingHorizontal: 10, // Padding horizontal
+    fontSize: 16, // Ukuran font
+    marginBottom: 20, // Jarak bawah input
+  },
+  saveButton: {
+    backgroundColor: '#35cc8c', // Warna tombol
+    paddingVertical: 15, // Padding vertikal
+    paddingHorizontal: 30, // Padding horizontal
+    borderRadius: 5, // Sudut melengkung
+    alignItems: 'center', // Pusatkan teks
+  },
+  saveButtonText: {
+    color: 'white', // Warna teks
+    fontSize: 16, // Ukuran font teks
+    fontWeight: 'bold', // Teks tebal
+  },
+  closeButton: {
+    position: 'absolute', // Posisi absolut di dalam modal
+    top: 10, // Jarak dari atas
+    right: 10, // Jarak dari kanan
+    backgroundColor: '#ddd', // Warna latar belakang tombol
+    width: 30, // Lebar tombol
+    height: 30, // Tinggi tombol
+    borderRadius: 15, // Membuat tombol berbentuk lingkaran
+    justifyContent: 'center', // Pusatkan teks secara vertikal
+    alignItems: 'center', // Pusatkan teks secara horizontal
+  },
+  closeButtonText: {
+    color: '#333', // Warna teks
+    fontSize: 16, // Ukuran font
+    fontWeight: 'bold', // Teks tebal
   },
 });

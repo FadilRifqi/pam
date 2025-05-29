@@ -1,4 +1,6 @@
 import * as WebBrowser from 'expo-web-browser';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig'; // Pastikan konfigurasi Firestore sudah benar
 import React, { useEffect } from 'react';
 import {
   GoogleSignin,
@@ -70,17 +72,22 @@ const LoginScreen = () => {
 
         await handleRegister(user.name, user.email, 'password123');
 
-        // Cek apakah data penting sudah ada
-        const [recommendedPFC, goal, gender] = await Promise.all([
-          AsyncStorage.getItem('recommendedPFC'),
-          AsyncStorage.getItem('goal'),
-          AsyncStorage.getItem('gender'),
-        ]);
+        // Ambil data dari Firestore
+        const userDocRef = doc(db, 'users', user.email);
+        const userDoc = await getDoc(userDocRef);
 
-        if (!recommendedPFC || !goal || !gender) {
-          router.push('/screens/Start/GoalScreen');
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const { recommendedPFC, goal, gender } = userData;
+
+          if (!recommendedPFC || !goal || !gender) {
+            router.push('/screens/Start/GoalScreen');
+          } else {
+            router.push('/pages/DiaryPage');
+          }
         } else {
-          router.push('/pages/DiaryPage');
+          console.warn('User document does not exist in Firestore.');
+          router.push('/screens/Start/GoalScreen');
         }
       } else {
         console.error('Cancelled by user');

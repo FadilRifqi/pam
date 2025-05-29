@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Alert,
   Animated,
@@ -10,20 +10,28 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig';
 
 const MeSettings = () => {
   const router = useRouter();
-  const [userData, setUserData] = useState({
-    goal: 'Lose Weight',
-    age: '25',
-    height: '175 cm',
-    weight: '70 kg',
-    gender: 'Male',
-    lifestyle: 'Active'
+  const [goal, setGoal] = useState('');
+  const [age, setAge] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [weight, setWeight] = useState(0);
+  const [gender, setGender] = useState('');
+  const [active, setActive] = useState('');
+  const [email, setEmail] = useState(null); // Tambahkan state untuk email
+  const [recommendedPFC, setRecommendedPFC] = useState({
+    protein: 0,
+    fats: 0,
+    carbs: 0,
+    calories: 0,
   });
-  
+
   // State for modal
   const [modalVisible, setModalVisible] = useState(false);
   const [editField, setEditField] = useState(null);
@@ -36,206 +44,160 @@ const MeSettings = () => {
   const [isChecked, setIsChecked] = useState(true);
   const checkAnimation = useRef(new Animated.Value(1)).current;
 
+  useEffect(() => {
+    // Ambil email dari AsyncStorage
+    const fetchUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedUserData = JSON.parse(userData);
+        if (userData) {
+          setEmail(parsedUserData.email); // Simpan email ke state
+        }
+
+        // Ambil data pengguna dari Firestore
+        const userDocRef = doc(db, 'users', parsedUserData.email);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setGoal(userData.goal || '');
+          setAge(userData.age || 0);
+          setHeight(userData.height || 0);
+          setWeight(userData.weight || 0);
+          setGender(userData.gender || '');
+          setActive(userData.active || '');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const handleBack = () => {
     router.back();
   };
 
   const handleEdit = (field) => {
+    console.log(`Editing field: ${field}`);
+
     setEditField(field);
-    setTempValue(userData[field]);
+    setTempValue(
+      field === 'goal'
+        ? goal
+        : field === 'age'
+        ? age
+        : field === 'height'
+        ? height
+        : field === 'weight'
+        ? weight
+        : field === 'gender'
+        ? gender
+        : active
+    );
     setModalVisible(true);
   };
 
-  const handleSave = () => {
-    // Show the confirmation popup
-    setSaveConfirmVisible(true);
-  };
+  const handleSave = async () => {
+    if (!email) {
+      Alert.alert('Error', 'User email not found. Please log in again.');
+      return;
+    }
 
-  const handleConfirmSave = () => {
-    // Check if the checkbox is checked
-    if (isChecked) {
-      console.log('Saving user data:', userData);
-      // Implement save functionality here
-      
-      // Show success message
-      Alert.alert('Success', 'Your settings have been saved.');
-      
-      // Hide the popup
-      setSaveConfirmVisible(false);
-    } else {
-      // Show notification that checkbox needs to be checked
+    try {
+      // Data yang akan disimpan ke Firestore
+      const updatedUserData = {
+        goal,
+        age,
+        height,
+        weight,
+        gender,
+        active,
+      };
+
+      // Hitung BMR menggunakan rumus Mifflin-St Jeor
+      let BMR;
+      if (gender === 'Male') {
+        BMR = 10 * weight + 6.25 * height - 5 * age + 5; // Tinggi dikalikan 100 untuk cm
+      } else if (gender === 'Female') {
+        BMR = 10 * weight + 6.25 * height - 5 * age - 161; // Tinggi dikalikan 100 untuk cm
+      } else {
+        console.error('Invalid gender');
+        return;
+      }
+
+      // Hitung TDEE berdasarkan faktor aktivitas
+      let TDEE;
+      switch (active) {
+        case 'Sedentary':
+          TDEE = BMR * 1.2;
+          break;
+        case 'Low Active':
+          TDEE = BMR * 1.375;
+          break;
+        case 'Active':
+          TDEE = BMR * 1.55;
+          break;
+        case 'Very Active':
+          TDEE = BMR * 1.725;
+          break;
+        default:
+          console.error('Invalid activity level');
+          return;
+      }
+
+      // Sesuaikan TDEE berdasarkan tujuan
+      if (goal === 'Lose Weight') {
+        TDEE *= 0.75; // Kurangi 25%
+      } else if (goal === 'Gain Weight') {
+        TDEE *= 1.2; // Tambah 20%
+      }
+
+      // Distribusi makronutrien (PFC)
+      const proteinCalories = TDEE * 0.25; // 25% dari kalori total
+      const fatsCalories = TDEE * 0.25; // 25% dari kalori total
+      const carbsCalories = TDEE - (proteinCalories + fatsCalories); // Sisa kalori untuk karbohidrat
+
+      const protein = Math.round(proteinCalories / 4); // 1 gram protein = 4 kalori
+      const fats = Math.round(fatsCalories / 9); // 1 gram lemak = 9 kalori
+      const carbs = Math.round(carbsCalories / 4); // 1 gram karbohidrat = 4 kalori
+      const calories = Math.round(TDEE);
+
+      // Simpan hasil ke state
+      const recommendedPFC = { protein, fats, carbs, calories };
+      setRecommendedPFC(recommendedPFC);
+
+      // Gabungkan data pengguna dan recommendedPFC
+      const userDataToSave = {
+        ...updatedUserData,
+        recommendedPFC,
+      };
+
+      // Simpan data ke Firestore
+      const userDocRef = doc(db, 'users', email); // Gunakan email sebagai ID dokumen
+      await setDoc(userDocRef, userDataToSave, { merge: true });
+
+      // Tampilkan pesan sukses
       Alert.alert(
-        'Action Required',
-        'Please check the "Update daily nutrients" option to save your changes.',
-        [
-          { text: 'OK', onPress: () => console.log('Alert closed') }
-        ]
+        'Success',
+        'Your settings and recommended PFC have been saved.'
       );
+    } catch (error) {
+      console.error('Error saving user data:', error);
+      Alert.alert('Error', 'Failed to save your settings.');
     }
   };
 
-  const handleCancelSave = () => {
-    // Just hide the popup
-    setSaveConfirmVisible(false);
-  };
-  
   const handleModalDone = () => {
-    // Update the user data with the temporary value
-    setUserData({
-      ...userData,
-      [editField]: tempValue
-    });
-    setModalVisible(false);
-  };
+    // Update state berdasarkan field yang sedang diedit
+    if (editField === 'goal') setGoal(tempValue);
+    else if (editField === 'age') setAge(tempValue);
+    else if (editField === 'height') setHeight(tempValue);
+    else if (editField === 'weight') setWeight(tempValue);
+    else if (editField === 'gender') setGender(tempValue);
+    else if (editField === 'active') setActive(tempValue);
 
-  const toggleCheckbox = () => {
-    const toValue = isChecked ? 0 : 1;
-    
-    Animated.sequence([
-      Animated.timing(checkAnimation, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true
-      }),
-      Animated.timing(checkAnimation, {
-        toValue,
-        duration: 150,
-        useNativeDriver: true
-      })
-    ]).start();
-    
-    setIsChecked(!isChecked);
-  };
-  
-  // Helper function to render the appropriate modal content based on field
-  const renderModalContent = () => {
-    switch(editField) {
-      case 'goal':
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose your goal</Text>
-            <TouchableOpacity 
-              style={tempValue === 'Lose Weight' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Lose Weight')}
-            >
-              <Text style={tempValue === 'Lose Weight' ? styles.optionTextSelected : styles.optionText}>Lose Weight</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={tempValue === 'Maintain Weight' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Maintain Weight')}
-            >
-              <Text style={tempValue === 'Maintain Weight' ? styles.optionTextSelected : styles.optionText}>Maintain Weight</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={tempValue === 'Gain Weight' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Gain Weight')}
-            >
-              <Text style={tempValue === 'Gain Weight' ? styles.optionTextSelected : styles.optionText}>Gain Weight</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      
-      case 'age':
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter your age</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter age (years)"
-                keyboardType="numeric"
-                value={tempValue}
-                onChangeText={setTempValue}
-              />
-            </View>
-          </View>
-        );
-      
-      case 'height':
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter your height</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter height (cm)"
-                keyboardType="numeric"
-                value={tempValue.replace(' cm', '')}
-                onChangeText={(text) => setTempValue(`${text} cm`)}
-              />
-            </View>
-          </View>
-        );
-      
-      case 'weight':
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Enter your weight</Text>
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter weight (kg)"
-                keyboardType="numeric"
-                value={tempValue.replace(' kg', '')}
-                onChangeText={(text) => setTempValue(`${text} kg`)}
-              />
-            </View>
-          </View>
-        );
-      
-      case 'gender':
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose your gender</Text>
-            <TouchableOpacity 
-              style={tempValue === 'Male' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Male')}
-            >
-              <Text style={tempValue === 'Male' ? styles.optionTextSelected : styles.optionText}>Male</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={tempValue === 'Female' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Female')}
-            >
-              <Text style={tempValue === 'Female' ? styles.optionTextSelected : styles.optionText}>Female</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      
-      case 'lifestyle':
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Choose your lifestyle</Text>
-            <TouchableOpacity 
-              style={tempValue === 'Sedentary' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Sedentary')}
-            >
-              <Text style={tempValue === 'Sedentary' ? styles.optionTextSelected : styles.optionText}>Sedentary</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={tempValue === 'Lightly Active' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Lightly Active')}
-            >
-              <Text style={tempValue === 'Lightly Active' ? styles.optionTextSelected : styles.optionText}>Lightly Active</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={tempValue === 'Active' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Active')}
-            >
-              <Text style={tempValue === 'Active' ? styles.optionTextSelected : styles.optionText}>Active</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={tempValue === 'Very Active' ? styles.optionSelected : styles.option}
-              onPress={() => setTempValue('Very Active')}
-            >
-              <Text style={tempValue === 'Very Active' ? styles.optionTextSelected : styles.optionText}>Very Active</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      
-      default:
-        return null;
-    }
+    setModalVisible(false);
   };
 
   return (
@@ -243,9 +205,9 @@ const MeSettings = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Image 
-            source={require('../../assets/images/back-button.png')} 
-            style={styles.icon} 
+          <Image
+            source={require('../../assets/images/back-button.png')}
+            style={styles.icon}
           />
         </TouchableOpacity>
         <Text style={styles.title}>Me</Text>
@@ -254,73 +216,73 @@ const MeSettings = () => {
       {/* User Data List */}
       <ScrollView style={styles.dataContainer}>
         {/* Goal */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('goal')}
         >
           <Text style={styles.dataLabel}>Goal</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.goal}</Text>
+            <Text style={styles.dataValue}>{goal}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Age */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('age')}
         >
           <Text style={styles.dataLabel}>Age</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.age}</Text>
+            <Text style={styles.dataValue}>{age}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Height */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('height')}
         >
           <Text style={styles.dataLabel}>Height</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.height}</Text>
+            <Text style={styles.dataValue}>{height}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Weight */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('weight')}
         >
           <Text style={styles.dataLabel}>Weight</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.weight}</Text>
+            <Text style={styles.dataValue}>{weight}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Gender */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
+        <TouchableOpacity
+          style={styles.dataItem}
           onPress={() => handleEdit('gender')}
         >
           <Text style={styles.dataLabel}>Gender</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.gender}</Text>
+            <Text style={styles.dataValue}>{gender}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
 
         {/* Lifestyle */}
-        <TouchableOpacity 
-          style={styles.dataItem} 
-          onPress={() => handleEdit('lifestyle')}
+        <TouchableOpacity
+          style={styles.dataItem}
+          onPress={() => handleEdit('active')}
         >
           <Text style={styles.dataLabel}>Lifestyle</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{userData.lifestyle}</Text>
+            <Text style={styles.dataValue}>{active}</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
@@ -328,14 +290,11 @@ const MeSettings = () => {
 
       {/* Save Button */}
       <View style={styles.saveButtonContainer}>
-        <TouchableOpacity 
-          style={styles.saveButton}
-          onPress={handleSave}
-        >
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
           <Text style={styles.saveButtonText}>Save</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* Modal for editing */}
       <Modal
         animationType="slide"
@@ -344,68 +303,242 @@ const MeSettings = () => {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.modalDismiss}
             onPress={() => setModalVisible(false)}
           />
           <View style={styles.modalContainer}>
-            {renderModalContent()}
-            
-            <TouchableOpacity 
+            {editField === 'goal' && (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Choose your goal</Text>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Lose Weight'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Lose Weight')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Lose Weight'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Lose Weight
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Maintain Weight'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Maintain Weight')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Maintain Weight'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Maintain Weight
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Gain Weight'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Gain Weight')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Gain Weight'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Gain Weight
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {editField === 'age' && (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Enter your age</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter age (years)"
+                    keyboardType="numeric"
+                    value={tempValue.toString()}
+                    onChangeText={setTempValue}
+                  />
+                </View>
+              </View>
+            )}
+
+            {editField === 'height' && (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Enter your height</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter height (cm)"
+                    keyboardType="numeric"
+                    value={tempValue.toString()}
+                    onChangeText={setTempValue}
+                  />
+                </View>
+              </View>
+            )}
+
+            {editField === 'weight' && (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Enter your weight</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter weight (kg)"
+                    keyboardType="numeric"
+                    value={tempValue.toString()}
+                    onChangeText={setTempValue}
+                  />
+                </View>
+              </View>
+            )}
+
+            {editField === 'gender' && (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Choose your gender</Text>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Male' ? styles.optionSelected : styles.option
+                  }
+                  onPress={() => setTempValue('Male')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Male'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Male
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Female'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Female')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Female'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Female
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {editField === 'active' && (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>
+                  Choose your activity level
+                </Text>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Sedentary'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Sedentary')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Sedentary'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Sedentary
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Low Active'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Low Active')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Low Active'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Low Active
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Active'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Active')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Active'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Active
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={
+                    tempValue === 'Very Active'
+                      ? styles.optionSelected
+                      : styles.option
+                  }
+                  onPress={() => setTempValue('Very Active')}
+                >
+                  <Text
+                    style={
+                      tempValue === 'Very Active'
+                        ? styles.optionTextSelected
+                        : styles.optionText
+                    }
+                  >
+                    Very Active
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <TouchableOpacity
               style={styles.doneButton}
               onPress={handleModalDone}
             >
               <Text style={styles.doneButtonText}>Done</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Modal for save confirmation */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={saveConfirmVisible}
-        onRequestClose={handleCancelSave}
-      >
-        <View style={styles.confirmModalOverlay}>
-          <View style={styles.confirmModalContainer}>
-            <Text style={styles.confirmModalTitle}>Save</Text>
-            
-            <View style={styles.confirmModalContent}>
-              <TouchableOpacity 
-                style={styles.checkIconContainer}
-                onPress={toggleCheckbox}
-              >
-                <Animated.Image
-                  source={require('../../assets/images/check.png')}
-                  style={[
-                    styles.checkIcon,
-                    {
-                      opacity: checkAnimation,
-                      transform: [{scale: checkAnimation}]
-                    }
-                  ]}
-                />
-              </TouchableOpacity>
-              <Text style={styles.confirmModalText}>Update daily nutrients</Text>
-            </View>
-            
-            <View style={styles.confirmButtonsRow}>
-              <TouchableOpacity 
-                style={styles.cancelButton}
-                onPress={handleCancelSave}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.okButton}
-                onPress={handleConfirmSave}
-              >
-                <Text style={styles.okButtonText}>OK</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </Modal>
@@ -489,7 +622,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
+
   // Modal styles
   modalOverlay: {
     flex: 1,

@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig'; // Pastikan konfigurasi Firestore sudah benar
 
 export default function WaterIntake({
   goal,
@@ -8,19 +10,43 @@ export default function WaterIntake({
   setInput,
   input,
   date,
+  email,
+  servingSize,
 }: any) {
   const percentage = Math.round((input.water / goal) * 100);
-  const [addWater, setAddWater] = useState<number>();
   const dateKey = date.toISOString().split('T')[0];
 
   const handleAddWater = async () => {
     try {
+      console.log('Adding water intake...');
       setInput((prevInput: any) => {
         const updatedInput = {
           ...prevInput,
-          water: parseFloat((prevInput.water + 0.2).toFixed(1)), // Tambahkan 0.2
+          water: parseFloat((prevInput.water + servingSize).toFixed(1)), // Tambahkan servingSize
         };
-        AsyncStorage.setItem(`input${dateKey}`, JSON.stringify(updatedInput)); // Simpan nilai terbaru
+
+        console.log('Updated input:', updatedInput);
+
+        // Simpan ke Firestore
+        const userEmail = email; // Pastikan email pengguna tersedia
+        if (userEmail) {
+          console.log('User email:', userEmail);
+          const userDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
+          setDoc(
+            userDocRef,
+            { input: updatedInput },
+            { merge: true } // Gabungkan dengan data yang ada
+          )
+            .then(() => console.log('Saved to Firestore:', updatedInput))
+            .catch((error) =>
+              console.error('Error saving to Firestore:', error)
+            );
+        } else {
+          console.warn(
+            'User email is not available. Skipping Firestore update.'
+          );
+        }
+
         return updatedInput; // Kembalikan nilai terbaru
       });
     } catch (error) {
@@ -31,12 +57,35 @@ export default function WaterIntake({
 
   const handleRemoveWater = async () => {
     try {
+      console.log('Removing water intake...');
       setInput((prevInput: any) => {
         const updatedInput = {
           ...prevInput,
-          water: parseFloat((prevInput.water - 0.2).toFixed(1)), // Kurangi 0.2
+          water: parseFloat((prevInput.water - servingSize).toFixed(1)), // Kurangi servingSize
         };
-        AsyncStorage.setItem(`input${dateKey}`, JSON.stringify(updatedInput)); // Simpan nilai terbaru
+
+        console.log('Updated input:', updatedInput);
+
+        // Simpan ke Firestore
+        const userEmail = email; // Pastikan email pengguna tersedia
+        if (userEmail) {
+          console.log('User email:', userEmail);
+          const userDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
+          setDoc(
+            userDocRef,
+            { input: updatedInput },
+            { merge: true } // Gabungkan dengan data yang ada
+          )
+            .then(() => console.log('Saved to Firestore:', updatedInput))
+            .catch((error) =>
+              console.error('Error saving to Firestore:', error)
+            );
+        } else {
+          console.warn(
+            'User email is not available. Skipping Firestore update.'
+          );
+        }
+
         return updatedInput; // Kembalikan nilai terbaru
       });
     } catch (error) {
@@ -44,22 +93,6 @@ export default function WaterIntake({
       Alert.alert('Error', 'Failed to remove water intake.');
     }
   };
-
-  useEffect(() => {
-    const fetchWaterSettings = async () => {
-      try {
-        const storedWater = await AsyncStorage.getItem('waterSettings');
-        if (storedWater) {
-          setAddWater(JSON.parse(storedWater));
-        } else {
-          setAddWater(0.2); // Default value
-        }
-      } catch (error) {
-        console.error('Error fetching water settings:', error);
-      }
-    };
-    fetchWaterSettings();
-  }, []);
 
   return (
     <View style={styles.container}>

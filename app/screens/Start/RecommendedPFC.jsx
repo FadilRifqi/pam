@@ -3,6 +3,8 @@ import React, { useEffect, useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const RecommendedPFCPage = () => {
   const [recommendedPFC, setRecommendedPFC] = useState({
@@ -10,6 +12,7 @@ const RecommendedPFCPage = () => {
     fats: 0,
     carbs: 0,
     calories: 0,
+    water: 2000,
   });
   const router = useRouter();
 
@@ -19,13 +22,33 @@ const RecommendedPFCPage = () => {
 
   const calculatePFC = async () => {
     try {
+      // Ambil email pengguna dari AsyncStorage
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+
+      if (!parsedUserData || !parsedUserData.email) {
+        console.error('User email not found in AsyncStorage.');
+        return;
+      }
+
+      const userEmail = parsedUserData.email;
+
+      // Ambil data dari Firestore
+      const userDocRef = doc(db, 'users', userEmail);
+      const userDoc = await getDoc(userDocRef);
+
+      if (!userDoc.exists()) {
+        console.error('User document does not exist in Firestore.');
+        return;
+      }
+
+      const goal = userDoc.data().goal; // Lose Weight, Keep Weight, Gain Weight
+      const gender = userDoc.data().gender;
       // Ambil data dari AsyncStorage
-      const goal = await AsyncStorage.getItem('goal'); // Lose Weight, Keep Weight, Gain Weight
-      const gender = await AsyncStorage.getItem('gender'); // Male, Female
-      const active = await AsyncStorage.getItem('active'); // Sedentary, Low Active, Active, Very Active
-      const height = parseFloat(await AsyncStorage.getItem('height')); // meter
-      const weight = parseFloat(await AsyncStorage.getItem('weight')); // kg
-      const age = parseInt(await AsyncStorage.getItem('age')); // tahun
+      const active = userDoc.data().active; // Sedentary, Low Active, Active, Very Active
+      const height = parseFloat(userDoc.data().height); // meter
+      const weight = parseFloat(userDoc.data().weight); // kg
+      const age = parseInt(userDoc.data().age); // tahun
 
       if (!goal || !gender || !active || !height || !weight || !age) {
         console.error('Data tidak lengkap untuk menghitung PFC');
@@ -35,9 +58,9 @@ const RecommendedPFCPage = () => {
       // Hitung BMR menggunakan rumus Mifflin-St Jeor
       let BMR;
       if (gender === 'Male') {
-        BMR = 10 * weight + 6.25 * (height * 100) - 5 * age + 5; // Tinggi dikalikan 100 untuk cm
+        BMR = 10 * weight + 6.25 * height - 5 * age + 5; // Tinggi dikalikan 100 untuk cm
       } else if (gender === 'Female') {
-        BMR = 10 * weight + 6.25 * (height * 100) - 5 * age - 161; // Tinggi dikalikan 100 untuk cm
+        BMR = 10 * weight + 6.25 * height - 5 * age - 161; // Tinggi dikalikan 100 untuk cm
       } else {
         console.error('Gender tidak valid');
         return;
@@ -83,11 +106,14 @@ const RecommendedPFCPage = () => {
       // Simpan hasil ke state
       setRecommendedPFC({ protein, fats, carbs, calories });
 
-      // Simpan ke AsyncStorage (opsional)
-      await AsyncStorage.setItem(
-        'recommendedPFC',
-        JSON.stringify({ protein, fats, carbs, calories })
-      );
+      // Gabungkan semua data yang akan disimpan
+      const dataToSave = {
+        recommendedPFC: { protein, fats, carbs, calories },
+        waterServingSize: 200,
+      };
+
+      // Simpan ke Firestore dalam satu operasi
+      await setDoc(userDocRef, dataToSave, { merge: true });
 
       console.log('PFC yang direkomendasikan:', {
         protein,

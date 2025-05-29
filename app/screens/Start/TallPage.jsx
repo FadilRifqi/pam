@@ -26,6 +26,8 @@ const TallPage = () => {
         return;
       }
 
+      const height = `${selectedMeter}.${selectedCm}`;
+
       // Simpan data tinggi badan ke Firestore
       const userDocRef = doc(db, 'users', parsedUserData.email); // Gunakan email sebagai ID dokumen
       await setDoc(
@@ -34,7 +36,7 @@ const TallPage = () => {
         { merge: true } // Gabungkan dengan data yang ada
       );
 
-      console.log('Height saved to Firestore:', height);
+      console.log('Height saved to Firestore:', height * 100);
 
       // Navigasi ke halaman berikutnya
       router.push('/screens/Start/WeightPage'); // Ganti dengan route halaman berikutnya

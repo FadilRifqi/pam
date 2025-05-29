@@ -41,8 +41,14 @@ const ProfilSettings = () => {
   };
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('userData');
-    router.replace('/');
+    try {
+      await AsyncStorage.clear(); // Hapus semua data dari AsyncStorage
+      router.replace('/'); // Arahkan pengguna kembali ke halaman utama
+      console.log('All storage cleared and user logged out.');
+    } catch (error) {
+      console.error('Error clearing AsyncStorage:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
 
   useEffect(() => {

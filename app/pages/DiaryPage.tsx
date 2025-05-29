@@ -273,7 +273,6 @@ function DiaryPage() {
             servingSize={waterServingSize / 1000}
             current={input.water}
             goal={PFC.water / 1000}
-            lastTime="10:45 AM"
             setInput={setInput}
             input={input}
             date={selectedDate}

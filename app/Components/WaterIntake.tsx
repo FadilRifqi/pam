@@ -6,7 +6,6 @@ import { db } from '../config/firebaseConfig'; // Pastikan konfigurasi Firestore
 
 export default function WaterIntake({
   goal,
-  lastTime,
   setInput,
   input,
   date,
@@ -101,7 +100,6 @@ export default function WaterIntake({
         <Text style={styles.amount}>
           {input.water} / {goal} L
         </Text>
-        <Text style={styles.time}>Last time {lastTime}</Text>
       </View>
       <View style={styles.right}>
         <Pressable onPress={handleAddWater}>

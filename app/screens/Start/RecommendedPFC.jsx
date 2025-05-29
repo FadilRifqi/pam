@@ -102,13 +102,14 @@ const RecommendedPFCPage = () => {
       const fats = Math.round(fatsCalories / 9); // 1 gram lemak = 9 kalori
       const carbs = Math.round(carbsCalories / 4); // 1 gram karbohidrat = 4 kalori
       const calories = Math.round(TDEE);
+      const water = 2000; // Asumsi kebutuhan air harian dalam ml
 
       // Simpan hasil ke state
-      setRecommendedPFC({ protein, fats, carbs, calories });
+      setRecommendedPFC({ protein, fats, carbs, calories, water });
 
       // Gabungkan semua data yang akan disimpan
       const dataToSave = {
-        recommendedPFC: { protein, fats, carbs, calories },
+        recommendedPFC: { protein, fats, carbs, calories, water },
         waterServingSize: 200,
       };
 

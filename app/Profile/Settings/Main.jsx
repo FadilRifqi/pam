@@ -22,7 +22,44 @@ const Main = () => {
   const [waterServingSize, setWaterServingSize] = useState(200);
   const [modalVisible, setModalVisible] = useState(false);
   const [tempWaterServingSize, setTempWaterServingSize] = useState('');
+  const [weightUnit, setWeightUnit] = useState('Kilograms'); // Default unit
+  const [heightUnit, setHeightUnit] = useState('Centimeter'); // Default unit
+
   const router = useRouter();
+
+  const handleChangeUnit = async (type, value) => {
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = JSON.parse(userData);
+
+      if (parsedUserData && parsedUserData.email) {
+        const userDocRef = doc(db, 'users', parsedUserData.email);
+
+        // Update unit di Firebase
+        const updateData =
+          type === 'weight' ? { weightUnit: value } : { heightUnit: value };
+
+        await setDoc(userDocRef, updateData, { merge: true });
+
+        // Update state lokal
+        if (type === 'weight') {
+          setWeightUnit(value);
+        } else {
+          setHeightUnit(value);
+        }
+
+        Alert.alert(
+          'Success',
+          `${
+            type === 'weight' ? 'Weight' : 'Height'
+          } unit updated successfully.`
+        );
+      }
+    } catch (error) {
+      console.error(`Error updating ${type} unit:`, error);
+      Alert.alert('Error', `Failed to update ${type} unit.`);
+    }
+  };
 
   const handleEditWaterServingSize = () => {
     setTempWaterServingSize(waterServingSize.toString());
@@ -88,6 +125,8 @@ const Main = () => {
 
           if (userDoc.exists()) {
             const userDataFromFirestore = userDoc.data();
+            setWeightUnit(userDataFromFirestore.weightUnit || 'Kilograms');
+            setHeightUnit(userDataFromFirestore.heightUnit || 'Centimeter');
             setWaterServingSize(userDataFromFirestore.waterServingSize || 200);
           }
         }
@@ -140,9 +179,16 @@ const Main = () => {
               />
               <Text style={styles.settingLabel}>Weight Unit</Text>
             </View>
-            <View style={styles.settingValueContainer}>
-              <Text style={styles.settingValue}>Kilograms</Text>
-            </View>
+            <TouchableOpacity
+              onPress={() =>
+                handleChangeUnit(
+                  'weight',
+                  weightUnit === 'Kilograms' ? 'Pounds' : 'Kilograms'
+                )
+              }
+            >
+              <Text style={styles.settingValue}>{weightUnit}</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.divider} />
 
@@ -154,9 +200,16 @@ const Main = () => {
               />
               <Text style={styles.settingLabel}>Height Unit</Text>
             </View>
-            <View style={styles.settingValueContainer}>
-              <Text style={styles.settingValue}>Centimeter</Text>
-            </View>
+            <TouchableOpacity
+              onPress={() =>
+                handleChangeUnit(
+                  'height',
+                  heightUnit === 'Centimeter' ? 'Inches' : 'Centimeter'
+                )
+              }
+            >
+              <Text style={styles.settingValue}>{heightUnit}</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.divider} />
 

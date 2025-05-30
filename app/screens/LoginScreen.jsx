@@ -49,7 +49,13 @@ const LoginScreen = () => {
       router.replace('/pages/DiaryPage');
     } catch (error) {
       console.error('Login Error:', error);
-      Alert.alert('Login Failed', error.message);
+      if (error.code === 'auth/invalid-credential')
+        Alert.alert('Login Failed', 'Invalid email or password.');
+      else
+        Alert.alert(
+          'Login Failed',
+          'Internal server error. Please try again later.'
+        );
     } finally {
       setIsSubmitting(false);
     }

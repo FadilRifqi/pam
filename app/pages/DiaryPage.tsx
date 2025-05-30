@@ -29,10 +29,20 @@ interface PFCProps {
   water: number;
 }
 
+type FoodItem = {
+  name: string;
+  grams: number;
+  calories: number;
+  protein: number;
+  fats: number;
+  carbs: number;
+};
+
 interface Meal {
   type: string;
   time: string;
   calories: number; // Optional property
+  inputMeals: FoodItem[]; // Array of food items
 }
 
 function DiaryPage() {
@@ -61,6 +71,7 @@ function DiaryPage() {
     type: '',
     time: '',
     calories: 0,
+    inputMeals: [],
   }); // State untuk input makanan
   const [waterServingSize, setWaterServingSize] = useState<number>(200); // Ukuran porsi air
   const router = useRouter();
@@ -95,10 +106,6 @@ function DiaryPage() {
               (meal) => typeof meal === 'object' && meal?.type
             );
             setMeals(mealsArray); // Set meals sebagai array
-            console.log(
-              'Meals from Firestore (converted to array):',
-              mealsArray
-            );
           } else {
             setMeals([]);
           }
@@ -192,7 +199,6 @@ function DiaryPage() {
           { meals: updatedMeals }, // Simpan meals
           { merge: true } // Gabungkan dengan data yang ada
         );
-        console.log('Meals saved to Firestore:', updatedMeals);
       } else {
         console.warn('User email is not available. Skipping Firestore update.');
       }
@@ -326,8 +332,18 @@ function DiaryPage() {
                   setMealInput({ ...mealInput, time: text })
                 }
               />
-              <Button title="Add Meal" onPress={handleAddMeal} />
-              <Button title="Close" onPress={() => setModalVisible(false)} />
+              <View style={{ width: '100%', flexDirection: 'column', gap: 10 }}>
+                <Button
+                  color={'#35cc8c'}
+                  title="Add Meal"
+                  onPress={handleAddMeal}
+                />
+                <Button
+                  color={'#007BFF'}
+                  title="Close"
+                  onPress={() => setModalVisible(false)}
+                />
+              </View>
             </View>
           </View>
         </Modal>
@@ -345,6 +361,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
+    marginBottom: 72,
   },
   header: {
     flexDirection: 'row',

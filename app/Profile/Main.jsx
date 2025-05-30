@@ -11,6 +11,7 @@ const ProfilSettings = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [calorie, setCalorie] = useState(0);
+  const [weightUnit, setWeightUnit] = useState('Kilograms');
 
   const handleBack = () => {
     router.back();
@@ -44,9 +45,7 @@ const ProfilSettings = () => {
     try {
       await AsyncStorage.clear(); // Hapus semua data dari AsyncStorage
       router.replace('/'); // Arahkan pengguna kembali ke halaman utama
-      console.log('All storage cleared and user logged out.');
     } catch (error) {
-      console.error('Error clearing AsyncStorage:', error);
       Alert.alert('Error', 'Failed to log out. Please try again.');
     }
   };
@@ -78,10 +77,10 @@ const ProfilSettings = () => {
 
           // Assuming the PFC data is stored under a field called "recommendedPFC"
           const { recommendedPFC } = userData;
+          setWeightUnit(userData.weightUnit || 'Kilograms'); // Set weight unit from user data
 
           if (recommendedPFC) {
             setCalorie(recommendedPFC.calories || 0); // Update state with calorie data
-            console.log('Recommended PFC data:', recommendedPFC);
           } else {
             console.warn('No recommended PFC data found.');
           }
@@ -139,7 +138,7 @@ const ProfilSettings = () => {
         </TouchableOpacity>
         <TouchableOpacity style={styles.greenButton}>
           <Text style={styles.greenButtonText}>Weight Unit</Text>
-          <Text style={styles.greenButtonRightText}>Kilograms</Text>
+          <Text style={styles.greenButtonRightText}>{weightUnit}</Text>
         </TouchableOpacity>
       </View>
 
@@ -239,6 +238,7 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 18,
     fontWeight: 'bold',
+    textAlign: 'center',
     color: '#333',
   },
   email: {

@@ -146,7 +146,6 @@ const CalorieIntakeSettings = () => {
   const handleConfirmSave = () => {
     // Check if the checkbox is checked
     if (isChecked) {
-      console.log('Saving nutrition data:', userData);
       // Implement save functionality here
 
       // Show success message

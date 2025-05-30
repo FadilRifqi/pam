@@ -13,6 +13,8 @@ import {
   TextInput,
   FlatList,
   ActivityIndicator,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
 import { createSignedUrl } from '../config/oAuthHelper';
 import axios from 'axios';
@@ -50,6 +52,10 @@ export default function MealDetail() {
   const [searchResults, setSearchResults] = useState<any[]>([]); // Hasil pencarian
   const [loading, setLoading] = useState(false); // Loading state
 
+  const handleBack = () => {
+    router.back();
+  };
+
   useEffect(() => {
     const fetchExistingItems = async () => {
       try {
@@ -58,11 +64,18 @@ export default function MealDetail() {
 
         if (userDoc.exists()) {
           const diaryData = userDoc.data();
-          const inputMealsKey = `input-meals${dateKey}-${mealKey}`;
-          const existingItems = diaryData.meals?.[inputMealsKey]?.items || [];
 
-          setItems(existingItems); // Set items dari Firestore
-          console.log('Existing items from Firestore:', existingItems);
+          // Cari meal dengan type === mealType
+          const meal = diaryData.meals?.find(
+            (m: any) => m.type === mealType?.toString()
+          );
+
+          if (meal && meal.inputMeals) {
+            setItems(meal.inputMeals.items || []); // Set items dari inputMeals
+          } else {
+            console.warn('No matching mealType found or inputMeals is empty.');
+            setItems([]); // Set items ke array kosong jika tidak ada data
+          }
         } else {
           console.warn('Diary document does not exist in Firestore.');
           setItems([]); // Set items ke array kosong jika tidak ada data
@@ -71,8 +84,9 @@ export default function MealDetail() {
         console.error('Error fetching existing items from Firestore:', error);
       }
     };
+
     fetchExistingItems();
-  }, []);
+  }, [email, dateKey, mealType]);
 
   const handleSearch = async () => {
     setLoading(true);
@@ -87,8 +101,6 @@ export default function MealDetail() {
           max_results: 50,
         }
       );
-
-      console.log();
 
       const response = await axios.get(url);
       const foods = response.data.foods.food; // Ambil data makanan
@@ -150,28 +162,22 @@ export default function MealDetail() {
 
   const handleSave = async () => {
     try {
-      let existingInput = { water: 0 };
+      // Ambil data meal sebelumnya dari Firestore
+      let meals = [];
+      let existingInput = { water: 0 }; // Default nilai input untuk water
+
       if (email) {
         const userDocRef = doc(db, 'users', email, 'diary', dateKey);
         const diaryDoc = await getDoc(userDocRef);
 
         if (diaryDoc.exists()) {
           const diaryData = diaryDoc.data();
-          existingInput = diaryData.input || { water: 0 }; // Use existing input data if available
+          meals = diaryData.meals || []; // Ambil data meals yang ada atau kosongkan
+          existingInput = diaryData.input || existingInput; // Ambil data input yang ada atau gunakan default
         }
       } else {
         console.warn('User email is not available. Skipping Firestore fetch.');
       }
-
-      // Gabungkan data lama (hanya water) dengan data baru (totals)
-      const newData = {
-        ...existingInput,
-        ...totals, // calories, protein, fats, carbs dari hasil reduce
-      };
-
-      // Ambil data meal sebelumnya
-      const storedMeals = await AsyncStorage.getItem(`meals_${dateKey}`);
-      let meals = storedMeals ? JSON.parse(storedMeals) : [];
 
       // Ubah atau tambahkan meal yang sesuai dengan mealType
       const updatedMeals = [...meals];
@@ -180,13 +186,47 @@ export default function MealDetail() {
       );
 
       if (index !== -1) {
-        updatedMeals[index].calories = totals.calories;
+        // Jika mealType sudah ada, tambahkan inputMeals
+        updatedMeals[index] = {
+          ...updatedMeals[index],
+          calories: totals.calories,
+          inputMeals: { items },
+        };
       } else {
+        // Jika mealType belum ada, tambahkan sebagai item baru
         updatedMeals.push({
           type: mealType?.toString(),
           calories: totals.calories,
+          inputMeals: { items },
         });
       }
+
+      // Hitung total dari seluruh meals
+      const totalInput = updatedMeals.reduce(
+        (acc, meal) => {
+          acc.calories += meal.calories || 0;
+          acc.protein += meal.inputMeals?.items.reduce(
+            (sum: number, item: FoodItem) => sum + (item.protein || 0),
+            0
+          );
+          acc.fats += meal.inputMeals?.items.reduce(
+            (sum: number, item: FoodItem) => sum + (item.fats || 0),
+            0
+          );
+          acc.carbs += meal.inputMeals?.items.reduce(
+            (sum: number, item: FoodItem) => sum + (item.carbs || 0),
+            0
+          );
+          return acc;
+        },
+        { calories: 0, protein: 0, fats: 0, carbs: 0 }
+      );
+
+      // Gabungkan totalInput dengan existingInput.water
+      const newData = {
+        ...totalInput,
+        water: existingInput.water, // Tetap gunakan nilai water dari existingInput
+      };
 
       // Simpan ke Firestore
       if (email) {
@@ -194,15 +234,11 @@ export default function MealDetail() {
         await setDoc(
           userDocRef,
           {
-            input: newData,
-            meals: {
-              ...updatedMeals,
-              [`input-meals${dateKey}-${mealKey}`]: { items }, // Tambahkan data input-meals
-            },
+            input: newData, // Perbarui input dengan total dari seluruh meals dan water
+            meals: updatedMeals, // Simpan updatedMeals ke Firestore
           },
           { merge: true } // Gabungkan dengan data yang ada
         );
-        console.log('Data saved to Firestore');
       } else {
         console.warn('User email is not available. Skipping Firestore update.');
       }
@@ -227,7 +263,23 @@ export default function MealDetail() {
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>{mealKey.toUpperCase()}</Text>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 20,
+        }}
+      >
+        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+          <Image
+            source={require('../../assets/images/back-button.png')}
+            style={styles.icon}
+          />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={styles.title}>{mealKey.toUpperCase()}</Text>
+        </View>
+      </View>
 
       <View style={styles.summary}>
         <Text>Total Calories: {totals.calories}</Text>
@@ -295,12 +347,17 @@ export default function MealDetail() {
                 }
               />
             )}
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.closeButtonText}>Close</Text>
-            </Pressable>
+            <View style={{ width: '100%' }}>
+              <Pressable style={styles.searchButton} onPress={handleSearch}>
+                <Text style={styles.closeButtonText}>Search</Text>
+              </Pressable>
+              <Pressable
+                style={styles.closeButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeButtonText}>Close</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -355,7 +412,12 @@ export default function MealDetail() {
 
 const styles = StyleSheet.create({
   container: { padding: 20, backgroundColor: '#fff', flex: 1 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
   summary: { marginVertical: 10 },
   subtitle: { fontSize: 18, fontWeight: '600', marginTop: 20 },
   item: {
@@ -390,6 +452,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
+    borderWidth: 1,
     height: '70%', // Fixed height untuk modal
     backgroundColor: '#fff',
     padding: 20,
@@ -423,8 +486,24 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
   },
+  searchButton: {
+    marginTop: 10,
+    backgroundColor: '#35cc8c',
+    padding: 10,
+    borderRadius: 5,
+  },
   closeButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+    width: '100%',
+    textAlign: 'center',
+  },
+  icon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
+  backButton: {
+    marginRight: 10,
   },
 });

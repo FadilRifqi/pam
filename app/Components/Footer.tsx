@@ -102,21 +102,24 @@ const Footer = () => {
 
   // Determine current tab based on pathname
   const getCurrentTab = () => {
-    if (pathname === '/pages/Recipes_Pages') return 'recipes';
     if (pathname === '/pages/Reports_Page') return 'reports';
+    if (pathname === '/pages/Recipes_Pages') return 'recipes';
     if (pathname === '/pages/DiaryPage') return 'diary';
-    // return 'diary'; // default to first tab
+    return 'diary'; // default to first tab
   };
 
   const getPosition = (pathname: string) => {
     switch (pathname) {
       case '/pages/Recipes_Pages/recipes':
+      case '/pages/Recipes_Pages':
         setPosition('LEFT');
         break;
       case '/pages/Reports_Page/reports':
+      case '/pages/Reports_Page':
         setPosition('RIGHT');
         break;
       case '/pages/DiaryPage/diary':
+      case '/pages/DiaryPage':
         setPosition('CENTER');
         break;
     }
@@ -127,8 +130,6 @@ const Footer = () => {
   }, [pathname]);
 
   const getScreensByPath = (pathname: string) => {
-    console.log(`Current pathname: ${pathname}`);
-
     switch (pathname) {
       case '/pages/DiaryPage/diary':
       case '/pages/DiaryPage':
@@ -157,13 +158,13 @@ const Footer = () => {
   const DummyScreen = () => <View />;
 
   return (
-    <View style={styles.container}>
+    <View>
       <CurvedBottomBarExpo.Navigator
         type="DOWN"
         style={styles.bottomBar}
         shadowStyle={styles.shadow}
         height={65}
-        circleWidth={60}
+        circleWidth={80}
         bgColor="#DBFBED"
         initialRouteName={getCurrentTab()}
         borderTopLeftRight={true}
@@ -242,15 +243,6 @@ const Footer = () => {
 export default Footer;
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    bottom: 0, // Padding bottom
-    left: 15, // Padding left
-    right: 15, // Padding right
-    height: 80,
-    borderRadius: 20,
-    // overflow: 'hidden',
-  },
   shadow: {
     shadowColor: '#DDDDDD',
     shadowOffset: {

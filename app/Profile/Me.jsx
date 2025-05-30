@@ -31,6 +31,8 @@ const MeSettings = () => {
     carbs: 0,
     calories: 0,
   });
+  const [weightUnit, setWeightUnit] = useState('Kilograms'); // Tambahkan state untuk unit berat
+  const [heightUnit, setHeightUnit] = useState('Centimeter'); // Tambahkan state untuk unit tinggi
 
   // State for modal
   const [modalVisible, setModalVisible] = useState(false);
@@ -62,10 +64,20 @@ const MeSettings = () => {
           const userData = userDoc.data();
           setGoal(userData.goal || '');
           setAge(userData.age || 0);
-          setHeight(userData.height || 0);
-          setWeight(userData.weight || 0);
+          setHeight(
+            heightUnit === 'Centimeter'
+              ? userData.height || 0
+              : (userData.height || 0) * 2.54
+          );
+          setWeight(
+            weightUnit === 'Kilograms'
+              ? userData.weight || 0
+              : (userData.weight || 0) / 2.205
+          );
           setGender(userData.gender || '');
           setActive(userData.active || '');
+          setWeightUnit(userData.weightUnit || 'Kilograms'); // Set weight unit from user data
+          setHeightUnit(userData.heightUnit || 'Centimeter'); // Set height unit from user data
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -79,8 +91,6 @@ const MeSettings = () => {
   };
 
   const handleEdit = (field) => {
-    console.log(`Editing field: ${field}`);
-
     setEditField(field);
     setTempValue(
       field === 'goal'
@@ -88,9 +98,13 @@ const MeSettings = () => {
         : field === 'age'
         ? age
         : field === 'height'
-        ? height
+        ? heightUnit === 'Centimeter'
+          ? height
+          : height / 2.54
         : field === 'weight'
-        ? weight
+        ? weightUnit === 'Kilograms'
+          ? weight
+          : weight * 2.205
         : field === 'gender'
         ? gender
         : active
@@ -192,11 +206,12 @@ const MeSettings = () => {
     // Update state berdasarkan field yang sedang diedit
     if (editField === 'goal') setGoal(tempValue);
     else if (editField === 'age') setAge(tempValue);
-    else if (editField === 'height') setHeight(tempValue);
-    else if (editField === 'weight') setWeight(tempValue);
+    else if (editField === 'height')
+      setHeight(heightUnit === 'Centimeter' ? tempValue : tempValue * 2.54);
+    else if (editField === 'weight')
+      setWeight(weightUnit === 'Kilograms' ? tempValue : tempValue / 2.205);
     else if (editField === 'gender') setGender(tempValue);
     else if (editField === 'active') setActive(tempValue);
-
     setModalVisible(false);
   };
 
@@ -246,7 +261,11 @@ const MeSettings = () => {
         >
           <Text style={styles.dataLabel}>Height</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{height}</Text>
+            <Text style={styles.dataValue}>
+              {heightUnit === 'Centimeter'
+                ? `${parseFloat(height).toFixed(2)} cm`
+                : `${parseFloat(height / 2.54).toFixed(2)} inch`}
+            </Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
@@ -258,7 +277,11 @@ const MeSettings = () => {
         >
           <Text style={styles.dataLabel}>Weight</Text>
           <View style={styles.dataValueContainer}>
-            <Text style={styles.dataValue}>{weight}</Text>
+            <Text style={styles.dataValue}>
+              {weightUnit === 'Kilograms'
+                ? `${parseFloat(weight).toFixed(2)} kg`
+                : `${parseFloat(weight * 2.205).toFixed(2)} lbs`}
+            </Text>
           </View>
         </TouchableOpacity>
         <View style={styles.divider} />
@@ -389,7 +412,11 @@ const MeSettings = () => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter height (cm)"
+                    placeholder={
+                      heightUnit === 'Centimeter'
+                        ? 'Enter height (cm)'
+                        : 'Enter height (inch)'
+                    }
                     keyboardType="numeric"
                     value={tempValue.toString()}
                     onChangeText={setTempValue}
@@ -404,7 +431,11 @@ const MeSettings = () => {
                 <View style={styles.inputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Enter weight (kg)"
+                    placeholder={
+                      weightUnit === 'Kilograms'
+                        ? 'Enter weight (kg)'
+                        : 'Enter weight (lbs)'
+                    }
                     keyboardType="numeric"
                     value={tempValue.toString()}
                     onChangeText={setTempValue}

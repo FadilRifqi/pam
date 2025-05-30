@@ -6,14 +6,16 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { useEffect, useState } from 'react';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { createSignedUrl } from '../config/oAuthHelper';
 import { Ionicons } from '@expo/vector-icons'; // Gunakan Ionicons untuk icon "timer"
 import StarRating from '../Components/StarRating';
 
 export default function RecipeDetail() {
+  const router = useRouter();
   const { recipeId } = useLocalSearchParams(); // Ambil recipe_id dari parameter
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +38,6 @@ export default function RecipeDetail() {
 
         if (data.recipe) {
           setRecipe(data.recipe); // Simpan detail resep
-          console.log('Recipe details:', data.recipe);
         } else {
           Alert.alert('Error', 'Recipe not found.');
         }
@@ -50,6 +51,10 @@ export default function RecipeDetail() {
 
     fetchRecipeDetails();
   }, [recipeId]);
+
+  const handleBack = () => {
+    router.back();
+  };
 
   if (loading) {
     return (
@@ -69,6 +74,12 @@ export default function RecipeDetail() {
 
   return (
     <ScrollView style={styles.container}>
+      <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+        <Image
+          source={require('../../assets/images/back-button.png')}
+          style={styles.icon}
+        />
+      </TouchableOpacity>
       {/* Gambar Resep */}
       {recipe.recipe_images?.recipe_image ? (
         Array.isArray(recipe.recipe_images.recipe_image) ? (
@@ -204,5 +215,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#ccc', // warna abu-abu terang
     marginVertical: 10, // jarak atas bawah
     width: '100%', // lebar full container
+  },
+  icon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
+  backButton: {
+    marginRight: 10,
   },
 });

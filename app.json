@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "test",
+    "name": "Hi-Se",
     "slug": "test",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Apple.png",
     "scheme": "https",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -41,7 +41,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "googleAuthRedirectUri": "https://auth.expo.io/@fadilrifqi/test",
+      "googleAuthRedirectUri": "https://auth.expo.io/@fadilrifqi/Hi-Se",
       "firebase": {
         "project_info": {
           "project_number": "184018390631",

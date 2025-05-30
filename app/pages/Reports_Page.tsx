@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { Dimensions } from 'react-native';
@@ -28,6 +29,7 @@ const ReportsScreen = () => {
   const [currentWeight, setCurrentWeight] = useState('');
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([]);
   const [initialWeight, setInitialWeight] = useState<number | null>(null);
+  const [weightUnit, setWeightUnit] = useState<string>('Kilograms');
 
   // Fetch data on mount
   useEffect(() => {
@@ -44,13 +46,18 @@ const ReportsScreen = () => {
 
         const userEmail = parsedUserData.email; // Ambil email dari AsyncStorage
         const userDocRef = doc(db, 'users', userEmail, 'data', 'weight');
+        const userDocRefUnit = doc(db, 'users', parsedUserData.email);
         const userDoc = await getDoc(userDocRef);
+        const userDocUnit = await getDoc(userDocRefUnit);
 
         let historyArray: WeightEntry[] = [];
         let initialWeight = null;
 
         if (userDoc.exists()) {
           const data = userDoc.data();
+          const unitData = userDocUnit.data();
+
+          setWeightUnit(unitData?.weightUnit || 'Kilograms');
           historyArray = data.weightHistory || [];
           initialWeight = data.initialWeight || null;
         }
@@ -106,7 +113,9 @@ const ReportsScreen = () => {
       return;
     }
 
-    const parsedWeight = parseFloat(currentWeight);
+    let parsedWeight = parseFloat(currentWeight);
+    parsedWeight =
+      weightUnit === 'Kilograms' ? parsedWeight : parsedWeight / 2.205;
     if (isNaN(parsedWeight) || parsedWeight <= 0) {
       Alert.alert('Error', 'Please enter a positive number');
       return;
@@ -157,7 +166,6 @@ const ReportsScreen = () => {
         { merge: true }
       );
 
-      console.log('Weight entry added to Firestore:', newEntry);
       setCurrentWeight('');
     } catch (error) {
       console.error('Error adding weight entry to Firestore:', error);
@@ -232,7 +240,11 @@ const ReportsScreen = () => {
     <View style={styles.weightEntry}>
       <View style={styles.weightRow}>
         <Text style={styles.weightLabel}>Weight</Text>
-        <Text style={styles.weightValue}>{item.weight} kg</Text>
+        <Text style={styles.weightValue}>
+          {weightUnit === 'Kilograms'
+            ? item.weight.toFixed(2) + ' kg'
+            : (item.weight * 2.205).toFixed(2) + ' lbs'}
+        </Text>
       </View>
       {item.fromBeginning !== undefined && (
         <View style={styles.weightRow}>
@@ -251,7 +263,9 @@ const ReportsScreen = () => {
             ]}
           >
             {item.fromBeginning > 0 ? '+' : ''}
-            {item.fromBeginning.toFixed(1)} kg
+            {weightUnit === 'Kilograms'
+              ? item.fromBeginning.toFixed(1) + ' kg'
+              : (item.fromBeginning * 2.205).toFixed(1) + ' lbs'}
           </Text>
         </View>
       )}
@@ -268,7 +282,9 @@ const ReportsScreen = () => {
     labels: chartEntries.map((entry) => entry.date),
     datasets: [
       {
-        data: chartEntries.map((entry) => entry.weight),
+        data: chartEntries.map((entry) =>
+          weightUnit === 'Kilograms' ? entry.weight : entry.weight * 2.205
+        ),
         color: (opacity = 1) => `rgba(35, 204, 140, ${opacity})`,
         strokeWidth: 2,
       },
@@ -281,34 +297,45 @@ const ReportsScreen = () => {
         <Text style={styles.header}>Weight Progress</Text>
 
         {weightHistory.length > 0 ? (
-          <LineChart
-            data={chartData}
-            width={screenWidth - 32}
-            height={220}
-            yAxisSuffix=" kg"
-            yAxisInterval={1}
-            chartConfig={{
-              backgroundColor: '#ffffff',
-              backgroundGradientFrom: '#ffffff',
-              backgroundGradientTo: '#ffffff',
-              decimalPlaces: 1,
-              color: (opacity = 1) => `rgba(35, 204, 140, ${opacity})`,
-              labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-              style: {
+          <ScrollView
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            style={{ height: 440 }}
+          >
+            <LineChart
+              data={chartData}
+              width={chartData.labels.length * 150} // Lebar dinamis berdasarkan jumlah label
+              height={220} // Tinggi dinamis
+              yAxisSuffix={weightUnit === 'Kilograms' ? ' kg' : ' lbs'}
+              yAxisInterval={1}
+              chartConfig={{
+                backgroundColor: '#ffffff',
+                backgroundGradientFrom: '#ffffff',
+                backgroundGradientTo: '#ffffff',
+                decimalPlaces: 1,
+                color: (opacity = 1) => `rgba(35, 204, 140, ${opacity})`,
+                labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                style: {
+                  borderRadius: 16,
+                },
+                propsForDots: {
+                  r: '4',
+                  strokeWidth: '2',
+                  stroke: '#35CC8C',
+                },
+                propsForLabels: {
+                  transform: [{ rotate: '-45deg' }], // Membuat label miring 45 derajat
+                  fontSize: 10, // Ukuran font label
+                  textAnchor: 'end', // Menyesuaikan posisi teks
+                },
+              }}
+              bezier
+              style={{
+                marginVertical: 8,
                 borderRadius: 16,
-              },
-              propsForDots: {
-                r: '4',
-                strokeWidth: '2',
-                stroke: '#35CC8C',
-              },
-            }}
-            bezier
-            style={{
-              marginVertical: 8,
-              borderRadius: 16,
-            }}
-          />
+              }}
+            />
+          </ScrollView>
         ) : (
           <Text
             style={{ textAlign: 'center', marginBottom: 16, color: '#999' }}
@@ -320,7 +347,11 @@ const ReportsScreen = () => {
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.weightInput}
-            placeholder="Enter weight (kg)"
+            placeholder={
+              weightUnit === 'Kilograms'
+                ? 'Enter weight (kg)'
+                : 'Enter weight (lbs)'
+            }
             keyboardType="numeric"
             value={currentWeight}
             onChangeText={setCurrentWeight}
@@ -353,6 +384,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    marginBottom: 36,
     backgroundColor: '#fff',
   },
   header: {

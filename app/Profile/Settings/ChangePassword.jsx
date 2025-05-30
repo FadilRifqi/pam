@@ -1,15 +1,21 @@
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  Image, 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Image,
   TextInput,
   Alert,
-  ScrollView
+  ScrollView,
 } from 'react-native';
 import React, { useState } from 'react';
 import { useRouter } from 'expo-router';
+import {
+  getAuth,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+} from 'firebase/auth';
 
 const ChangePassword = () => {
   const router = useRouter();
@@ -24,31 +30,53 @@ const ChangePassword = () => {
     router.back();
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert('Error', 'No user is currently logged in.');
+      return;
+    }
+
     // Validate passwords
     if (!oldPassword) {
       Alert.alert('Error', 'Please enter your old password');
       return;
     }
-    
+
     if (!newPassword) {
       Alert.alert('Error', 'Please enter your new password');
       return;
     }
-    
+
     if (newPassword !== confirmPassword) {
       Alert.alert('Error', 'New passwords do not match');
       return;
     }
-    
+
     if (newPassword.length < 6) {
       Alert.alert('Error', 'New password must be at least 6 characters');
       return;
     }
-    
-    // Change password logic would go here
-    Alert.alert('Success', 'Your password has been changed successfully');
-    router.back();
+
+    try {
+      // Reauthenticate the user with the old password
+      const credential = EmailAuthProvider.credential(user.email, oldPassword);
+      await reauthenticateWithCredential(user, credential);
+
+      // Update the password
+      await updatePassword(user, newPassword);
+
+      Alert.alert('Success', 'Your password has been changed successfully');
+      router.back();
+    } catch (error) {
+      if (error.code === 'auth/wrong-password') {
+        Alert.alert('Error', 'The old password is incorrect.');
+      } else {
+        Alert.alert('Error', 'Failed to change password. Please try again.');
+      }
+    }
   };
 
   return (
@@ -68,7 +96,7 @@ const ChangePassword = () => {
         <Text style={styles.subtitle}>
           Please enter your old and new passwords to continue
         </Text>
-        
+
         {/* Old Password */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Old password</Text>
@@ -88,14 +116,14 @@ const ChangePassword = () => {
                 source={require('../../../assets/images/eye.png')}
                 style={[
                   styles.icon,
-                  showOldPassword && { tintColor: '#35cc8c' }
+                  showOldPassword && { tintColor: '#35cc8c' },
                 ]}
               />
             </TouchableOpacity>
           </View>
         </View>
         <View style={styles.divider} />
-        
+
         {/* New Password */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>New password</Text>
@@ -115,14 +143,14 @@ const ChangePassword = () => {
                 source={require('../../../assets/images/eye.png')}
                 style={[
                   styles.icon,
-                  showNewPassword && { tintColor: '#35cc8c' }
+                  showNewPassword && { tintColor: '#35cc8c' },
                 ]}
               />
             </TouchableOpacity>
           </View>
         </View>
         <View style={styles.divider} />
-        
+
         {/* Repeat New Password */}
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Repeat new password</Text>
@@ -142,7 +170,7 @@ const ChangePassword = () => {
                 source={require('../../../assets/images/eye.png')}
                 style={[
                   styles.icon,
-                  showConfirmPassword && { tintColor: '#35cc8c' }
+                  showConfirmPassword && { tintColor: '#35cc8c' },
                 ]}
               />
             </TouchableOpacity>
@@ -150,10 +178,10 @@ const ChangePassword = () => {
         </View>
         <View style={styles.divider} />
       </ScrollView>
-      
+
       {/* Change Button */}
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.changeButton}
           onPress={handleChangePassword}
         >

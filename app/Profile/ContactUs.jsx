@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  Image, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   View,
   ScrollView,
   TextInput,
-  Linking
+  Linking,
 } from 'react-native';
 
 const ContactUsSettings = () => {
@@ -21,7 +21,6 @@ const ContactUsSettings = () => {
 
   const handleSend = () => {
     // Implement sending functionality here
-    console.log('Sending message:', message);
     alert('Message sent successfully!');
     setMessage('');
   };
@@ -39,9 +38,9 @@ const ContactUsSettings = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <Image 
-            source={require('../../assets/images/back-button.png')} 
-            style={styles.icon} 
+          <Image
+            source={require('../../assets/images/back-button.png')}
+            style={styles.icon}
           />
         </TouchableOpacity>
         <Text style={styles.title}>Contact Us</Text>
@@ -49,25 +48,32 @@ const ContactUsSettings = () => {
 
       <ScrollView style={styles.contentContainer}>
         <Text style={styles.description}>
-          Don't hesitate to contact us if you find a bug or have a suggestion. 
-          We highly appreciate any feedback provided, as it helps us improve your Calorie Tracker.
+          Don't hesitate to contact us if you find a bug or have a suggestion.
+          We highly appreciate any feedback provided, as it helps us improve
+          your Calorie Tracker.
         </Text>
 
         <View style={styles.contactInfoSection}>
           <Text style={styles.sectionTitle}>Contact Info</Text>
-          
-          <TouchableOpacity onPress={handleEmailPress} style={styles.contactItem}>
-            <Image 
-              source={require('../../assets/images/contactus.png')} 
-              style={styles.contactIcon} 
+
+          <TouchableOpacity
+            onPress={handleEmailPress}
+            style={styles.contactItem}
+          >
+            <Image
+              source={require('../../assets/images/contactus.png')}
+              style={styles.contactIcon}
             />
             <Text style={styles.contactText}>itamiomw@gmail.com</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity onPress={handleInstagramPress} style={styles.contactItem}>
-            <Image 
-              source={require('../../assets/images/contactus.png')} 
-              style={styles.contactIcon} 
+
+          <TouchableOpacity
+            onPress={handleInstagramPress}
+            style={styles.contactItem}
+          >
+            <Image
+              source={require('../../assets/images/contactus.png')}
+              style={styles.contactIcon}
             />
             <Text style={styles.contactText}>@itamiomw</Text>
           </TouchableOpacity>
@@ -75,7 +81,7 @@ const ContactUsSettings = () => {
 
         <View style={styles.messageSection}>
           <Text style={styles.sectionTitle}>Message</Text>
-          
+
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.messageInput}
@@ -87,19 +93,17 @@ const ContactUsSettings = () => {
               textAlignVertical="top"
             />
           </View>
-          
+
           <Text style={styles.supportingText}>
-            Please provide as much detail as possible to help us understand your feedback.
+            Please provide as much detail as possible to help us understand your
+            feedback.
           </Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.sendButton}
-          onPress={handleSend}
-        >
+        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.bottomSpace} />
       </ScrollView>
     </View>
@@ -162,7 +166,7 @@ const styles = StyleSheet.create({
     height: 24,
     marginRight: 15,
     tintColor: '#35cc8c',
-    resizeMode: 'contain'
+    resizeMode: 'contain',
   },
   contactText: {
     fontSize: 16,
@@ -201,5 +205,5 @@ const styles = StyleSheet.create({
   },
   bottomSpace: {
     height: 40,
-  }
+  },
 });

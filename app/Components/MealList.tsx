@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 type MealListProps = {
   name: string; // e.g., 'Breakfast'
@@ -39,7 +40,15 @@ export default function MealList({
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.time}>{time}</Text>
       </View>
-      <Text style={styles.calories}>{calories || 0} Cal</Text>
+      <View style={styles.caloriesContainer}>
+        <Ionicons
+          name="add-circle-outline"
+          size={20}
+          color="black"
+          style={styles.addIcon}
+        />
+        <Text style={styles.calories}>{calories || 0} Cal</Text>
+      </View>
     </Pressable>
   );
 }
@@ -56,5 +65,12 @@ const styles = StyleSheet.create({
   },
   name: { fontWeight: '600', fontSize: 16 },
   time: { fontSize: 12, color: 'gray' },
+  caloriesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addIcon: {
+    marginRight: 8, // Jarak antara ikon dan teks kalori
+  },
   calories: { fontWeight: 'bold', fontSize: 16 },
 });

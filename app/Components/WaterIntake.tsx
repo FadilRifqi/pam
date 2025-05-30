@@ -17,19 +17,15 @@ export default function WaterIntake({
 
   const handleAddWater = async () => {
     try {
-      console.log('Adding water intake...');
       setInput((prevInput: any) => {
         const updatedInput = {
           ...prevInput,
           water: parseFloat((prevInput.water + servingSize).toFixed(1)), // Tambahkan servingSize
         };
 
-        console.log('Updated input:', updatedInput);
-
         // Simpan ke Firestore
         const userEmail = email; // Pastikan email pengguna tersedia
         if (userEmail) {
-          console.log('User email:', userEmail);
           const userDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
           setDoc(
             userDocRef,
@@ -56,19 +52,15 @@ export default function WaterIntake({
 
   const handleRemoveWater = async () => {
     try {
-      console.log('Removing water intake...');
       setInput((prevInput: any) => {
         const updatedInput = {
           ...prevInput,
           water: parseFloat((prevInput.water - servingSize).toFixed(1)), // Kurangi servingSize
         };
 
-        console.log('Updated input:', updatedInput);
-
         // Simpan ke Firestore
         const userEmail = email; // Pastikan email pengguna tersedia
         if (userEmail) {
-          console.log('User email:', userEmail);
           const userDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
           setDoc(
             userDocRef,

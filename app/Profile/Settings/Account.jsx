@@ -46,10 +46,12 @@ const Account = () => {
 
         // Update the state with the new photo URI
         setProfileImage(imageUri);
-
-        console.log('Profile photo updated successfully:', imageUri);
       } catch (error) {
         console.error('Error updating profile photo:', error);
+        Alert.alert(
+          'Error',
+          'Failed to update profile photo. Please try again.'
+        );
       }
     }
   };
@@ -78,11 +80,13 @@ const Account = () => {
       {
         text: 'Logout',
         style: 'destructive',
-        onPress: () => {
-          // Implement logout functionality
-          console.log('User logged out');
-          // Navigate to login screen
-          router.replace('/');
+        onPress: async () => {
+          try {
+            await AsyncStorage.clear(); // Hapus semua data dari AsyncStorage
+            router.replace('/'); // Arahkan pengguna kembali ke halaman utama
+          } catch (error) {
+            Alert.alert('Error', 'Failed to log out. Please try again.');
+          }
         },
       },
     ]);
@@ -97,11 +101,13 @@ const Account = () => {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            // Implement account deletion
-            console.log('Account deleted');
-            // Navigate to login screen
-            router.replace('/');
+          onPress: async () => {
+            try {
+              await AsyncStorage.clear(); // Hapus semua data dari AsyncStorage
+              router.replace('/'); // Arahkan pengguna kembali ke halaman utama
+            } catch (error) {
+              Alert.alert('Error', 'Failed to log out. Please try again.');
+            }
           },
         },
       ]

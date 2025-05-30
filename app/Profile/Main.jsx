@@ -1,10 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../config/firebaseConfig';
 
 const ProfilSettings = () => {
   const router = useRouter();
+  const [profileImage, setProfileImage] = useState(null);
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [calorie, setCalorie] = useState(0);
 
   const handleBack = () => {
     router.back();
@@ -35,9 +41,59 @@ const ProfilSettings = () => {
   };
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('userData');
-    router.replace('/');
+    try {
+      await AsyncStorage.clear(); // Hapus semua data dari AsyncStorage
+      router.replace('/'); // Arahkan pengguna kembali ke halaman utama
+      console.log('All storage cleared and user logged out.');
+    } catch (error) {
+      console.error('Error clearing AsyncStorage:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
   };
+
+  useEffect(() => {
+    // Get user data from AsyncStorage
+    const fetchUserData = async () => {
+      try {
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedUserData = JSON.parse(userData);
+        if (userData) {
+          setUsername(parsedUserData.name || 'Username');
+          setProfileImage(parsedUserData.photo || null);
+          setEmail(parsedUserData.email);
+        }
+        if (!parsedUserData.email) {
+          console.warn('User email is not available.');
+          return;
+        }
+
+        // Reference to the user's document in Firestore
+        const userDocRef = doc(db, 'users', parsedUserData.email);
+
+        // Fetch the document
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+
+          // Assuming the PFC data is stored under a field called "recommendedPFC"
+          const { recommendedPFC } = userData;
+
+          if (recommendedPFC) {
+            setCalorie(recommendedPFC.calories || 0); // Update state with calorie data
+            console.log('Recommended PFC data:', recommendedPFC);
+          } else {
+            console.warn('No recommended PFC data found.');
+          }
+        } else {
+          console.warn('User document does not exist.');
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    fetchUserData();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -58,11 +114,11 @@ const ProfilSettings = () => {
         style={styles.profileContainer}
       >
         <Image
-          source={{ uri: 'https://via.placeholder.com/150' }} // Ganti dengan URL foto profil
+          source={{ uri: profileImage }} // Ganti dengan URL foto profil
           style={styles.profileImage}
         />
-        <Text style={styles.username}>Username</Text>
-        <Text style={styles.email}>user@example.com</Text>
+        <Text style={styles.username}>{username}</Text>
+        <Text style={styles.email}>{email}</Text>
       </TouchableOpacity>
 
       {/* Tombol Hijau */}
@@ -79,7 +135,7 @@ const ProfilSettings = () => {
           onPress={handleCalorieIntakeNext}
         >
           <Text style={styles.greenButtonText}>Calorie Intake</Text>
-          <Text style={styles.greenButtonRightText}>3400</Text>
+          <Text style={styles.greenButtonRightText}>{calorie}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.greenButton}>
           <Text style={styles.greenButtonText}>Weight Unit</Text>

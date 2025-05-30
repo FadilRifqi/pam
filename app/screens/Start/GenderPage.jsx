@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const GenderPage = () => {
   const [selectedGender, setSelectedGender] = useState('Male');
@@ -13,8 +15,34 @@ const GenderPage = () => {
   };
 
   const handleNext = async () => {
-    await AsyncStorage.setItem('gender', selectedGender);
-    router.push('/screens/Start/ActivePage');
+    try {
+      // Ambil email pengguna dari AsyncStorage
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+
+      if (!parsedUserData || !parsedUserData.email) {
+        console.warn('User email not found in AsyncStorage.');
+        return;
+      }
+
+      const userEmail = parsedUserData.email;
+
+      // Simpan gender ke Firestore
+      const userDocRef = doc(db, 'users', userEmail);
+      await setDoc(
+        userDocRef,
+        { gender: selectedGender }, // Simpan gender
+        { merge: true } // Gabungkan dengan data yang ada
+      );
+
+      console.log('Gender saved to Firestore:', selectedGender);
+
+      // Lanjutkan ke halaman berikutnya
+      router.push('/screens/Start/ActivePage');
+    } catch (error) {
+      console.error('Error saving goal to Firestore:', error);
+      Alert.alert('Error', 'Failed to save goal. Please try again.');
+    }
   };
 
   return (

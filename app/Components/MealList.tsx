@@ -7,6 +7,7 @@ type MealListProps = {
   calories: number | undefined;
   time: string; // e.g., '10:45 AM'
   date: Date; // e.g., '2023-09-21'
+  email: string | null; // User's email for routing
 };
 
 export default function MealList({
@@ -14,6 +15,7 @@ export default function MealList({
   calories,
   time,
   date,
+  email,
 }: MealListProps) {
   const router = useRouter();
   const dateKey = date.toISOString().split('T')[0]; // Format date to YYYY-MM-DD
@@ -27,7 +29,7 @@ export default function MealList({
     const mealType = name; // convert 'Breakfast' => 'breakfast'
     router.push({
       pathname: '/meal/[mealType]',
-      params: { mealType, dateKey },
+      params: { mealType, dateKey, email },
     });
   };
 

@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const ActivePage = () => {
   const [selectedActive, setSelectedActive] = useState('Sedentary');
@@ -13,8 +15,33 @@ const ActivePage = () => {
   };
 
   const handleNext = async () => {
-    await AsyncStorage.setItem('active', selectedActive);
-    router.push('/screens/Start/TallPage');
+    try {
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+      if (!parsedUserData || !parsedUserData.email) {
+        console.warn('User email not found in AsyncStorage.');
+        return;
+      }
+      if (!parsedUserData.email) {
+        console.warn('User email is not available.');
+        return;
+      }
+
+      // Simpan data tinggi badan ke Firestore
+      const userDocRef = doc(db, 'users', parsedUserData.email); // Gunakan email sebagai ID dokumen
+      await setDoc(
+        userDocRef,
+        { active: selectedActive }, // Data yang akan disimpan
+        { merge: true } // Gabungkan dengan data yang ada
+      );
+
+      console.log('selectedActive saved to Firestore:', selectedActive);
+
+      // Navigasi ke halaman berikutnya
+      router.push('/screens/Start/TallPage'); // Ganti dengan route halaman berikutnya
+    } catch (error) {
+      console.error('Error saving selectedActive to Firestore:', error);
+    }
   };
   return (
     <View style={styles.container1}>
@@ -121,7 +148,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontselectedActive: 'bold',
     marginBottom: 10,
     textAlign: 'center',
   },

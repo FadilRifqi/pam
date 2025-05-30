@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig'; // Ensure auth is properly configured
 import {
   View,
@@ -62,6 +62,7 @@ function DiaryPage() {
     time: '',
     calories: 0,
   }); // State untuk input makanan
+  const [waterServingSize, setWaterServingSize] = useState<number>(200); // Ukuran porsi air
   const router = useRouter();
 
   // Ambil URI gambar profil dari AsyncStorage
@@ -69,58 +70,93 @@ function DiaryPage() {
     const fetchMeals = async () => {
       try {
         const dateKey = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
-        const storedInput = await AsyncStorage.getItem(`input${dateKey}`);
-        const storedMeals = await AsyncStorage.getItem(`meals_${dateKey}`);
 
-        // Save to Firestore
-        const userEmail = email; // Ensure email is fetched and set in state
+        // Ambil email pengguna dari AsyncStorage
+        const userData = await AsyncStorage.getItem('userData');
+        const parsedUserData = userData ? JSON.parse(userData) : null;
 
-        if (userEmail) {
-          const userDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
-
-          await setDoc(userDocRef, {
-            input: storedInput ? JSON.parse(storedInput) : null,
-            meals: storedMeals ? JSON.parse(storedMeals) : [],
-          });
-
-          console.log('Data saved to Firestore');
+        if (!parsedUserData || !parsedUserData.email) {
+          console.error('User email not found in AsyncStorage.');
+          return;
         }
 
-        if (storedMeals) {
-          setMeals(JSON.parse(storedMeals));
-          console.log('Meals:', JSON.parse(storedMeals));
+        const userEmail = parsedUserData.email;
+
+        // Ambil data dari Firestore
+        const diaryDocRef = doc(db, 'users', userEmail, 'diary', dateKey);
+        const diaryDoc = await getDoc(diaryDocRef);
+
+        if (diaryDoc.exists()) {
+          const diaryData = diaryDoc.data();
+          const { input, meals } = diaryData;
+
+          if (meals) {
+            const mealsArray = Object.values(meals as Meal).filter(
+              (meal) => typeof meal === 'object' && meal?.type
+            );
+            setMeals(mealsArray); // Set meals sebagai array
+            console.log(
+              'Meals from Firestore (converted to array):',
+              mealsArray
+            );
+          } else {
+            setMeals([]);
+          }
+
+          if (input) {
+            setInput(input); // Set input dari Firestore
+          } else {
+            setInput({ protein: 0, fats: 0, carbs: 0, calories: 0, water: 0 });
+          }
         } else {
+          console.warn('Diary document does not exist in Firestore.');
           setMeals([]);
-        }
-        if (storedInput) {
-          setInput(JSON.parse(storedInput));
-        } else {
           setInput({ protein: 0, fats: 0, carbs: 0, calories: 0, water: 0 });
         }
       } catch (error) {
-        console.error('Error fetching meals:', error);
+        console.error('Error fetching meals from Firestore:', error);
       }
     };
     const fetchUserData = async () => {
       try {
-        const dateKey = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
-        const dailyData = await AsyncStorage.getItem(dateKey);
-        if (dailyData) {
-          setPFC(JSON.parse(dailyData));
-        } else {
-          setPFC({ protein: 0, fats: 0, carbs: 0, calories: 0, water: 0 });
-        }
         const userData = await AsyncStorage.getItem('userData');
-        const recommendedPFC = await AsyncStorage.getItem('recommendedPFC');
-        if (recommendedPFC) {
-          const parsedPFC = JSON.parse(recommendedPFC);
-          setPFC(parsedPFC);
+        const parsedUserData = userData ? JSON.parse(userData) : null;
+
+        if (!parsedUserData || !parsedUserData.email) {
+          console.error('User email not found in AsyncStorage.');
+          return;
         }
-        if (userData) {
-          const parsedData = JSON.parse(userData);
-          setProfileImage(parsedData.photo); // Ambil URI gambar profil
-          setUserName(parsedData.name); // Ambil nama pengguna
-          setEmail(parsedData.email); // Ambil email pengguna
+
+        const userEmail = parsedUserData.email;
+
+        // Ambil data dari Firestore
+        const userDocRef = doc(db, 'users', userEmail);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userDataFromFirestore = userDoc.data();
+          const { recommendedPFC, waterServingSize } = userDataFromFirestore;
+
+          if (waterServingSize) {
+            setWaterServingSize(waterServingSize); // Set ukuran porsi air dari Firestore
+          } else {
+            console.warn('Water serving size not found in Firestore.');
+            setWaterServingSize(200); // Set default ukuran porsi air
+          }
+
+          if (recommendedPFC) {
+            setPFC(recommendedPFC); // Set PFC dari Firestore
+          } else {
+            console.warn('Recommended PFC not found in Firestore.');
+            setPFC({ protein: 0, fats: 0, carbs: 0, calories: 0, water: 0 });
+          }
+
+          // Set data pengguna lainnya
+          setProfileImage(parsedUserData.photo);
+          setUserName(parsedUserData.name);
+          setEmail(parsedUserData.email);
+        } else {
+          console.error('User document does not exist in Firestore.');
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -141,10 +177,26 @@ function DiaryPage() {
       const dateKey = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
       const updatedMeals = [...meals, mealInput];
       setMeals(updatedMeals); // Update state
+
+      // Simpan ke AsyncStorage
       await AsyncStorage.setItem(
         `meals_${dateKey}`,
         JSON.stringify(updatedMeals)
-      ); // Simpan ke AsyncStorage
+      );
+
+      // Simpan ke Firestore
+      if (email) {
+        const diaryDocRef = doc(db, 'users', email, 'diary', dateKey);
+        await setDoc(
+          diaryDocRef,
+          { meals: updatedMeals }, // Simpan meals
+          { merge: true } // Gabungkan dengan data yang ada
+        );
+        console.log('Meals saved to Firestore:', updatedMeals);
+      } else {
+        console.warn('User email is not available. Skipping Firestore update.');
+      }
+
       setModalVisible(false); // Tutup modal
       setMealInput({ type: '', time: '', calories: 0 }); // Reset input
       Alert.alert('Success', 'Meal added successfully!');
@@ -218,12 +270,13 @@ function DiaryPage() {
         {/* Water Intake */}
         <View style={styles.section}>
           <WaterIntake
+            servingSize={waterServingSize / 1000}
             current={input.water}
-            goal={2.5}
-            lastTime="10:45 AM"
+            goal={PFC.water / 1000}
             setInput={setInput}
             input={input}
             date={selectedDate}
+            email={email}
           />
         </View>
 
@@ -241,6 +294,7 @@ function DiaryPage() {
             calories={meal.calories}
             time={meal.time}
             date={selectedDate}
+            email={email} // Ensure email is not null
           />
         ))}
 

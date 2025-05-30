@@ -3,14 +3,42 @@ import React, { useState } from 'react';
 import ThemedButton from '../../../components/ThemedButton';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 
 const AgePage = () => {
-  const [weight, setAge] = useState(0);
+  const [age, setAge] = useState(0);
   const router = useRouter();
 
   const handleNext = async () => {
-    await AsyncStorage.setItem('age', weight);
-    router.push('/screens/Start/RecommendedPFC');
+    try {
+      // Ambil email pengguna dari AsyncStorage
+      const userData = await AsyncStorage.getItem('userData');
+      const parsedUserData = userData ? JSON.parse(userData) : null;
+
+      if (!parsedUserData || !parsedUserData.email) {
+        console.warn('User email not found in AsyncStorage.');
+        return;
+      }
+
+      const userEmail = parsedUserData.email;
+
+      // Simpan age ke Firestore
+      const userDocRef = doc(db, 'users', userEmail);
+      await setDoc(
+        userDocRef,
+        { age: age }, // Simpan age
+        { merge: true } // Gabungkan dengan data yang ada
+      );
+
+      console.log('age saved to Firestore:', age);
+
+      // Lanjutkan ke halaman berikutnya
+      router.push('/screens/Start/RecommendedPFC');
+    } catch (error) {
+      console.error('Error saving goal to Firestore:', error);
+      Alert.alert('Error', 'Failed to save goal. Please try again.');
+    }
   };
 
   return (
@@ -26,7 +54,7 @@ const AgePage = () => {
           style={styles.input}
           placeholder="Enter Age (years)"
           keyboardType="numeric"
-          value={weight}
+          value={age}
           onChangeText={(text) => setAge(text)}
         />
       </View>

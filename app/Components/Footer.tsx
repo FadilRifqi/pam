@@ -1,5 +1,5 @@
 import { usePathname, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Animated,
   Image,
@@ -13,6 +13,7 @@ import { CurvedBottomBarExpo } from 'react-native-curved-bottom-bar';
 const Footer = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const [position, setPosition] = React.useState('CENTER');
 
   // Helper untuk cek apakah route aktif
   const isActive = (path: string) => pathname === path;
@@ -51,6 +52,21 @@ const Footer = () => {
             </Text>
           </View>
         );
+      case 'diary':
+        return (
+          <View style={styles.tabItem}>
+            <Image
+              source={require('../../assets/images/diary.png')}
+              style={[
+                styles.tabIconImage,
+                isActiveRoute && styles.activeIconImage,
+              ]}
+            />
+            <Text style={[styles.tabText, isActiveRoute && styles.activeText]}>
+              Diary
+            </Text>
+          </View>
+        );
       default:
         return null;
     }
@@ -73,6 +89,8 @@ const Footer = () => {
             router.push('/pages/Recipes_Pages');
           } else if (routeName === 'reports') {
             router.push('/pages/Reports_Page');
+          } else {
+            router.push('/pages/DiaryPage');
           }
         }}
         style={styles.tabbarItem}
@@ -87,7 +105,53 @@ const Footer = () => {
     if (pathname === '/pages/Recipes_Pages') return 'recipes';
     if (pathname === '/pages/Reports_Page') return 'reports';
     if (pathname === '/pages/DiaryPage') return 'diary';
-    return 'recipes'; // default to first tab
+    // return 'diary'; // default to first tab
+  };
+
+  const getPosition = (pathname: string) => {
+    switch (pathname) {
+      case '/pages/Recipes_Pages/recipes':
+        setPosition('LEFT');
+        break;
+      case '/pages/Reports_Page/reports':
+        setPosition('RIGHT');
+        break;
+      case '/pages/DiaryPage/diary':
+        setPosition('CENTER');
+        break;
+    }
+  };
+
+  useEffect(() => {
+    getPosition(pathname);
+  }, [pathname]);
+
+  const getScreensByPath = (pathname: string) => {
+    console.log(`Current pathname: ${pathname}`);
+
+    switch (pathname) {
+      case '/pages/DiaryPage/diary':
+      case '/pages/DiaryPage':
+        return [
+          { name: 'recipes', position: 'LEFT' },
+          { name: 'diary', position: 'CENTER' },
+          { name: 'reports', position: 'RIGHT' },
+        ];
+      case '/pages/Reports_Page/reports':
+      case '/pages/Reports_Page':
+        return [
+          { name: 'recipes', position: 'LEFT' },
+          { name: 'reports', position: 'CENTER' },
+          { name: 'diary', position: 'RIGHT' },
+        ];
+      case '/pages/Recipes_Pages/recipes':
+      case '/pages/Recipes_Pages':
+        return [
+          { name: 'diary', position: 'LEFT' },
+          { name: 'recipes', position: 'CENTER' },
+          { name: 'reports', position: 'RIGHT' },
+        ];
+    }
   };
 
   const DummyScreen = () => <View />;
@@ -107,32 +171,54 @@ const Footer = () => {
         id={undefined}
         borderColor={undefined}
         borderWidth={undefined}
-        circlePosition={undefined}
+        circlePosition={position}
         backBehavior={undefined}
         renderCircle={({ selectedTab, navigate }) => {
-          const isDiaryActive =
-            selectedTab === 'diary' || isActive('/pages/DiaryPage');
+          let iconSource;
+          let label;
+          let targetPath;
+
+          switch (pathname) {
+            case '/pages/Recipes_Pages/recipes':
+              iconSource = require('../../assets/images/recipes.png');
+              label = 'Recipes';
+              targetPath = '/pages/Recipes_Pages';
+              break;
+            case '/pages/Reports_Page/reports':
+              iconSource = require('../../assets/images/reports.png');
+              label = 'Reports';
+              targetPath = '/pages/Reports_Page';
+              break;
+            case '/pages/DiaryPage/diary':
+            default:
+              iconSource = require('../../assets/images/diary.png');
+              label = 'Diary';
+              targetPath = '/pages/DiaryPage';
+              break;
+          }
+
+          const isActiveRoute = pathname === targetPath;
 
           return (
             <Animated.View style={styles.btnCircleUp}>
               <TouchableOpacity
                 style={styles.button}
-                onPress={() => router.push('/pages/DiaryPage')}
+                onPress={() => router.push(targetPath)}
               >
                 <Image
-                  source={require('../../assets/images/diary.png')}
+                  source={iconSource}
                   style={[
                     styles.centerIconImage,
-                    isDiaryActive && styles.activeCenterIconImage,
+                    isActiveRoute && styles.activeCenterIconImage,
                   ]}
                 />
                 <Text
                   style={[
                     styles.centerText,
-                    isDiaryActive && styles.activeCenterText,
+                    isActiveRoute && styles.activeCenterText,
                   ]}
                 >
-                  Diary
+                  {label}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -140,21 +226,14 @@ const Footer = () => {
         }}
         tabBar={renderTabBar}
       >
-        <CurvedBottomBarExpo.Screen
-          name="recipes"
-          position="LEFT"
-          component={DummyScreen}
-        />
-        <CurvedBottomBarExpo.Screen
-          name="diary"
-          position="CENTER"
-          component={DummyScreen}
-        />
-        <CurvedBottomBarExpo.Screen
-          name="reports"
-          position="RIGHT"
-          component={DummyScreen}
-        />
+        {getScreensByPath(pathname)?.map((screen) => (
+          <CurvedBottomBarExpo.Screen
+            key={screen.name}
+            name={screen.name}
+            position={screen.position}
+            component={DummyScreen}
+          />
+        ))}
       </CurvedBottomBarExpo.Navigator>
     </View>
   );

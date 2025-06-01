@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.pam.test'
+    namespace 'com.pam.HiSe'
     defaultConfig {
-        applicationId 'com.pam.test'
+        applicationId 'com.pam.HiSe'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

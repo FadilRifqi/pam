@@ -27,6 +27,8 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="https"/>
         <data android:scheme="com.pam.test"/>
+        <data android:scheme="com.pam.HiSe"/>
+        <data android:scheme="exp+test"/>
       </intent-filter>
     </activity>
   </application>

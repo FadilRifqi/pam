@@ -1,4 +1,4 @@
-package com.pam.test
+package com.pam.HiSe
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

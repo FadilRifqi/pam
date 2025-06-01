@@ -1,50 +1,26 @@
-# Welcome to your Expo app 👋
+BMR dihitung dengan rumus Mifflin-St Jeor:
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+    Untuk pria:
+    BMR=10×berat(kg)+6.25×tinggi(cm)−5×usia+5
+    BMR=10×berat(kg)+6.25×tinggi(cm)−5×usia+5
 
-## Get started
+    Untuk wanita:
+    BMR=10×berat(kg)+6.25×tinggi(cm)−5×usia−161
+    BMR=10×berat(kg)+6.25×tinggi(cm)−5×usia−161
 
-1. Install dependencies
+TDEE (Total Daily Energy Expenditure) dihitung dengan mengalikan BMR dengan faktor aktivitas fisik, yang mengacu pada tingkat aktivitas pengguna (sedentary, low active, active, very active).
 
-   ```bash
-   npm install
-   ```
+Penyesuaian kalori berdasarkan tujuan (menurunkan berat badan atau menaikkan berat badan) juga umum dalam pedoman diet.
 
-2. Start the app
+Distribusi makronutrien (protein, lemak, karbohidrat) diatur berdasarkan persentase kalori, menggunakan standar bahwa:
 
-   ```bash
-    npx expo start
-   ```
+    1 gram protein = 4 kalori
 
-In the output, you'll find options to open the app in a
+    1 gram lemak = 9 kalori
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+    1 gram karbohidrat = 4 kalori
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+Kebutuhan air harian yang diambil adalah asumsi standar 2000 ml (2 liter), sering direkomendasikan secara umum.
 
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Acceptable Macronutrient Distribution Ranges (AMDR):
+Merupakan kisaran asupan makronutrien yang dianggap sehat dan aman untuk menjaga kesehatan. AMDR untuk karbohidrat adalah 45-65% dari total kalori, protein 10-35%, dan lemak 20-35%

@@ -10,17 +10,17 @@ BMR dihitung dengan rumus Mifflin-St Jeor:
 
 TDEE (Total Daily Energy Expenditure) dihitung dengan mengalikan BMR dengan faktor aktivitas fisik, yang mengacu pada tingkat aktivitas pengguna (sedentary, low active, active, very active).
 
+Acceptable Macronutrient Distribution Ranges (AMDR):
+Merupakan kisaran asupan makronutrien yang dianggap sehat dan aman untuk menjaga kesehatan. AMDR untuk karbohidrat adalah 45-65% dari total kalori, protein 10-35%, dan lemak 20-35%
+
 Penyesuaian kalori berdasarkan tujuan (menurunkan berat badan atau menaikkan berat badan) juga umum dalam pedoman diet.
 
 Distribusi makronutrien (protein, lemak, karbohidrat) diatur berdasarkan persentase kalori, menggunakan standar bahwa:
 
-    1 gram protein = 4 kalori
+    kalori protein = 25% dari kalori total
 
-    1 gram lemak = 9 kalori
+    kalori lemak = 25% dari kalori total
 
-    1 gram karbohidrat = 4 kalori
+    kalori karbohidrat = kalori total - (kalori protein + kalori lemak )
 
 Kebutuhan air harian yang diambil adalah asumsi standar 2000 ml (2 liter), sering direkomendasikan secara umum.
-
-Acceptable Macronutrient Distribution Ranges (AMDR):
-Merupakan kisaran asupan makronutrien yang dianggap sehat dan aman untuk menjaga kesehatan. AMDR untuk karbohidrat adalah 45-65% dari total kalori, protein 10-35%, dan lemak 20-35%
